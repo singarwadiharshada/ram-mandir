@@ -1,0 +1,165 @@
+.items-page {
+  width: 100%;
+}
+
+.page-header {
+  border-bottom: 3px solid #f97316;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.page-header h2 {
+  color: #c2410c;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-header h2 span {
+  background-color: #fcd34d;
+  color: #c2410c;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+/* Progress Bar */
+.progress-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.progress-bar-bg {
+  width: 80px;
+  height: 8px;
+  background-color: #fed7aa;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: #92400e;
+  min-width: 45px;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: bold;
+  color: white;
+  white-space: nowrap;
+}
+
+.status-badge.fulfilled {
+  background-color: #22c55e;
+}
+
+.status-badge.pending {
+  background-color: #f97316;
+}
+
+/* Import Section */
+.import-section {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: #fff7ed;
+  border: 2px solid #f97316;
+  border-radius: 8px;
+}
+
+.import-section h3 {
+  color: #c2410c;
+  margin-bottom: 10px;
+}
+
+.import-section p {
+  color: #92400e;
+  margin-bottom: 15px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.file-upload {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 15px 0;
+  padding: 15px;
+  background-color: white;
+  border: 2px dashed #f97316;
+  border-radius: 8px;
+}
+
+.file-upload input[type="file"] {
+  display: none;
+}
+
+.file-upload label {
+  cursor: pointer;
+}
+
+.file-name {
+  color: #92400e;
+  font-size: 14px;
+}
+
+.template-links {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+.template-link {
+  color: #c2410c;
+  text-decoration: none;
+  padding: 8px 15px;
+  border: 2px solid #f97316;
+  border-radius: 5px;
+  background-color: white;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.template-link:hover {
+  background-color: #f97316;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .file-upload {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .template-links {
+    flex-direction: column;
+  }
+  
+  .template-link {
+    text-align: center;
+  }
+}

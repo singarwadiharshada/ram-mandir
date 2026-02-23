@@ -1,0 +1,74 @@
+const mongoose = require('mongoose');
+
+const donationSchema = new mongoose.Schema({
+  donorName: { 
+    type: String, 
+    required: [true, 'देणगीदाराचे नाव आवश्यक आहे'] 
+  },
+  mobile: { 
+    type: String, 
+    required: [true, 'मोबाईल नंबर आवश्यक आहे'],
+    match: [/^\d{10}$/, 'मोबाईल नंबर १० अंकी असावा']
+  },
+  service: { 
+    type: String, 
+    enum: ['महाप्रसाद', 'अभिषेक', 'इतर'], 
+    required: true 
+  },
+  item: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'PrasadItem', 
+    required: true 
+  },
+  itemName: String,
+  quantity: { 
+    type: Number, 
+    required: true,
+    min: [0.001, 'प्रमाण ० पेक्षा जास्त असावे']
+  },
+  unit: String,
+  amount: { 
+    type: Number, 
+    required: true,
+    min: [1, 'रक्कम १ पेक्षा जास्त असावी']
+  },
+  address: String,
+  date: { 
+    type: Date, 
+    default: Date.now 
+  }
+});
+
+// Update item received quantity after save
+donationSchema.post('save', async function() {
+  const PrasadItem = mongoose.model('PrasadItem');
+  const Donation = mongoose.model('Donation');
+  
+  const total = await Donation.aggregate([
+    { $match: { item: this.item } },
+    { $group: { _id: null, total: { $sum: '$quantity' } } }
+  ]);
+  
+  await PrasadItem.findByIdAndUpdate(this.item, {
+    received: total[0]?.total || 0
+  });
+});
+
+// Update item received quantity after delete
+donationSchema.post('findOneAndDelete', async function(doc) {
+  if (doc) {
+    const PrasadItem = mongoose.model('PrasadItem');
+    const Donation = mongoose.model('Donation');
+    
+    const total = await Donation.aggregate([
+      { $match: { item: doc.item } },
+      { $group: { _id: null, total: { $sum: '$quantity' } } }
+    ]);
+    
+    await PrasadItem.findByIdAndUpdate(doc.item, {
+      received: total[0]?.total || 0
+    });
+  }
+});
+
+module.exports = mongoose.model('Donation', donationSchema);

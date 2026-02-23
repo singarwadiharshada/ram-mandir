@@ -1,0 +1,83 @@
+.success-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fdf2e9, #fff7ed);
+  font-family: "Krutidev 010", "Shree Dev 0714", "DV-TTYogesh", sans-serif;
+  padding: 20px;
+}
+
+.success-card {
+  background: white;
+  padding: 50px 40px;
+  border-radius: 20px;
+  border: 3px solid #f97316;
+  box-shadow: 0 10px 30px rgba(249,115,22,0.2);
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.success-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: bounce 1s ease;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.success-card h1 {
+  color: #c2410c;
+  font-size: 32px;
+  margin-bottom: 15px;
+}
+
+.success-card p {
+  color: #92400e;
+  font-size: 18px;
+  margin: 10px 0;
+  line-height: 1.6;
+}
+
+.success-details {
+  background: #fff7ed;
+  padding: 20px;
+  border-radius: 10px;
+  margin: 25px 0;
+  border: 2px solid #fed7aa;
+}
+
+.home-btn {
+  display: inline-block;
+  background: #f97316;
+  color: white;
+  text-decoration: none;
+  padding: 14px 30px;
+  border-radius: 30px;
+  font-size: 18px;
+  font-weight: bold;
+  border: 2px solid #fcd34d;
+  transition: all 0.3s;
+}
+
+.home-btn:hover {
+  background: #ea580c;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(249,115,22,0.3);
+}
