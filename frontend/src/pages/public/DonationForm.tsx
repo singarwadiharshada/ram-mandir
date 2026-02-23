@@ -96,13 +96,21 @@ const DonationForm: React.FC = () => {
 
   return (
     <div className="donation-form-container">
-      {/* Temple Header */}
+      {/* Temple Header with Login on Right */}
       <div className="temple-header">
         <div className="header-content">
-          <h1>श्री राम मंदिर, शाहूपुरी, कोल्हापूर</h1>
-          <h2>श्री राम जन्मोत्सव २०२६</h2>
-          <p className="temple-dates">१९ मार्च २०२६ ते २६ मार्च २०२६</p>
-          <p className="temple-address">श्री राम मंदिर, शाहूपुरी ४ थी गल्ली, कोल्हापूर</p>
+          <h1 className="main-title">श्री राम मंदिर, शाहूपुरी, कोल्हापूर</h1>
+          <h2 className="festival-title">श्री राम जन्मोत्सव २०२६</h2>
+          <h3 >१९ मार्च २०२६ ते २६ मार्च २०२६</h3>
+          <h4 >श्री राम मंदिर, शाहूपुरी ४ थी गल्ली, कोल्हापूर</h4>
+        </div>
+        
+        {/* Login Button on Right Side */}
+        <div className="header-login">
+          <a href="/login" className="login-btn">
+            <span className="login-icon">👤</span>
+            {/* <span className="login-text">प्रशासक लॉगिन</span> */}
+          </a>
         </div>
       </div>
 
@@ -263,11 +271,6 @@ const DonationForm: React.FC = () => {
             {createMutation.isPending ? 'नोंदवत आहे...' : 'जय श्री राम 🔥'}
           </button>
         </form>
-
-        {/* Admin Login Link */}
-        <div className="admin-login-link">
-          <a href="/login">प्रशासक लॉगिन</a>
-        </div>
       </div>
 
       {/* Footer */}

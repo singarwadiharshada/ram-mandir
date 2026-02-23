@@ -1,3 +1,16 @@
+/* Theme Colors */
+:root {
+  --saffron: #FF9933;
+  --saffron-dark: #e68a2e;
+  --gold: #FFD700;
+  --gold-light: #FFE55C;
+  --vermilion: #E34234;
+  --marble-white: #F9F6EE;
+  --text-dark: #5d3a1a;
+  --text-light: #fff9e6;
+  --shadow-color: rgba(227, 66, 52, 0.15);
+}
+
 /* Reset and Base Styles */
 * {
   margin: 0;
@@ -8,8 +21,8 @@
 html, body {
   width: 100%;
   min-height: 100vh;
-  background: #fdf2e9;
-  font-family: "Krutidev 010", "Shree Dev 0714", "DV-TTYogesh", sans-serif;
+  background: var(--marble-white);
+  font-family: "Krutidev 010", "Shree Dev 0714", "DV-TTYogesh", "Poppins", sans-serif;
 }
 
 .dashboard-container {
@@ -17,16 +30,16 @@ html, body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #fdf2e9;
+  background: var(--marble-white);
 }
 
-/* ==================== HEADER WITH IMAGE ==================== */
+/* ==================== HEADER ==================== */
 .temple-header {
-  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  background: linear-gradient(135deg, var(--saffron) 0%, var(--saffron-dark) 100%);
   color: white;
-  padding: 15px 25px;
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
-  border-bottom: 3px solid #fcd34d;
+  padding: 20px 30px;
+  box-shadow: 0 4px 20px var(--shadow-color);
+  border-bottom: 3px solid var(--gold);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -35,76 +48,58 @@ html, body {
   min-height: 100px;
 }
 
-/* Left side - Image */
-.header-left {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.temple-image {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  border: 3px solid #fcd34d;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  object-fit: cover;
-  background: white;
-  transition: all 0.3s ease;
-  animation: gentlePulse 3s infinite ease-in-out;
-}
-
-.temple-image:hover {
-  transform: scale(1.05) rotate(5deg);
-  border-color: white;
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
-}
-
-@keyframes gentlePulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.02);
-  }
-}
-
-/* Center - Text Content */
-.header-center {
+.header-content {
   flex: 1;
-  text-align: center;
 }
 
 .temple-name {
-  font-size: clamp(18px, 2.5vw, 26px);
+  font-size: clamp(20px, 3vw, 28px);
   margin-bottom: 5px;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
   font-weight: bold;
-  line-height: 1.2;
+  line-height: 1.3;
+  color: var(--text-light);
+  letter-spacing: 0.5px;
 }
 
 .festival-name {
-  font-size: clamp(14px, 2vw, 20px);
-  color: #fef9c3;
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+  font-size: clamp(16px, 2.2vw, 22px);
+  color: var(--gold-light);
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
   font-weight: 600;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 5px;
 }
 
-/* Right side - User Info */
-.header-right {
-  flex: 0 0 auto;
+.festival-name::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: var(--gold);
+  border-radius: 2px;
 }
 
+/* User Info */
 .user-info {
   display: flex;
   align-items: center;
   gap: 15px;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 8px 16px;
-  border-radius: 40px;
-  border: 2px solid #fcd34d;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 20px;
+  border-radius: 50px;
+  border: 2px solid var(--gold-light);
   backdrop-filter: blur(5px);
+  transition: all 0.3s ease;
+}
+
+.user-info:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .user-name {
@@ -112,28 +107,35 @@ html, body {
   font-weight: bold;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  color: var(--text-light);
+}
+
+.user-icon {
+  font-size: 18px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
 }
 
 .logout-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid #fcd34d;
+  background: var(--vermilion);
+  border: none;
   color: white;
-  padding: 6px 15px;
+  padding: 8px 20px;
   border-radius: 30px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 14px;
   font-weight: 600;
   transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(227, 66, 52, 0.3);
 }
 
 .logout-btn:hover {
-  background: #fcd34d;
-  color: #c2410c;
+  background: #c53030;
   transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(227, 66, 52, 0.4);
 }
 
 .logout-icon {
@@ -144,10 +146,10 @@ html, body {
 .nav-tabs {
   display: flex;
   background: white;
-  border-bottom: 3px solid #f97316;
+  border-bottom: 3px solid var(--saffron);
   overflow-x: auto;
   flex-wrap: nowrap;
-  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.1);
+  box-shadow: 0 2px 10px var(--shadow-color);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -163,190 +165,186 @@ html, body {
 .nav-tab {
   flex: 1 0 auto;
   min-width: 120px;
-  padding: 14px 10px;
+  padding: 16px 15px;
   text-align: center;
   background: white;
-  color: #f97316;
-  font-weight: bold;
+  color: var(--text-dark);
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
-  border-right: 2px solid #fed7aa;
+  /* border-right: 2px solid var(--gold-light); */
   font-size: 16px;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
 }
 
 .nav-tab:last-child {
   border-right: none;
 }
 
+.nav-tab::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 153, 51, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.nav-tab:hover::before {
+  left: 100%;
+}
+
 .nav-tab:hover {
-  background: #fff7ed;
-  color: #c2410c;
+  background: var(--marble-white);
+  color: var(--saffron-dark);
 }
 
 .nav-tab.active {
-  background: linear-gradient(135deg, #f97316, #fb923c);
+  background: linear-gradient(135deg, var(--saffron), var(--saffron-dark));
   color: white;
   position: relative;
+  box-shadow: inset 0 -3px 0 var(--gold);
 }
 
 .nav-tab.active::after {
   content: '';
   position: absolute;
-  bottom: -3px;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background: #fcd34d;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid var(--gold);
 }
 
 .tab-icon {
-  font-size: 18px;
+  font-size: 20px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
 }
 
 /* ==================== CONTENT AREA ==================== */
 .content-area {
-  background: white;
-  padding: 25px;
+  padding: 30px;
   flex: 1;
   width: 100%;
+  max-width: 100%;
+  margin: 20px 0 0 0;
+  background: var(--marble-white);
+  box-shadow: 0 4px 20px var(--shadow-color);
+  min-height: 500px;
+  border-radius: 20px 20px 0 0;
+}
+
+/* Optional: Add inner content container if you need max-width for content */
+.content-inner {
   max-width: 1400px;
   margin: 0 auto;
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.05);
-  min-height: 500px;
+  width: 100%;
 }
 
 /* ==================== FOOTER ==================== */
 .footer {
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  background: linear-gradient(135deg, var(--saffron-dark) 0%, var(--vermilion) 100%);
   color: white;
-  padding: 20px;
+  padding: 25px;
   text-align: center;
-  box-shadow: 0 -4px 12px rgba(249, 115, 22, 0.2);
-  border-top: 3px solid #fcd34d;
+  box-shadow: 0 -4px 20px var(--shadow-color);
+  border-top: 3px solid var(--gold);
   width: 100%;
+  margin-top: 20px;
 }
 
 .footer-text {
-  font-size: 16px;
-  margin-bottom: 8px;
-  color: #fef9c3;
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: var(--gold-light);
   font-weight: 500;
+  letter-spacing: 0.5px;
 }
 
 .copyright {
-  font-size: 14px;
-  color: #fff7ed;
+  font-size: 15px;
+  color: var(--text-light);
   opacity: 0.9;
 }
 
 /* ==================== RESPONSIVE DESIGN ==================== */
 
-/* Large Desktop (1200px and above) */
-@media (min-width: 1200px) {
-  .temple-image {
-    width: 80px;
-    height: 80px;
-  }
-}
-
 /* Tablet (768px to 1024px) */
-@media (max-width: 1024px) and (min-width: 768px) {
+@media (max-width: 1024px) {
   .temple-header {
-    padding: 12px 20px;
-  }
-  
-  .temple-image {
-    width: 60px;
-    height: 60px;
+    padding: 15px 25px;
   }
   
   .user-info {
-    padding: 6px 12px;
+    padding: 6px 15px;
   }
   
   .nav-tab {
     min-width: 110px;
-    padding: 12px 8px;
+    padding: 14px 10px;
     font-size: 15px;
   }
 }
 
 /* Mobile Landscape (576px to 767px) */
-@media (max-width: 767px) and (min-width: 576px) {
+@media (max-width: 767px) {
   .temple-header {
-    flex-wrap: wrap;
-    padding: 12px;
-    gap: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 15px 20px;
   }
   
-  .header-left {
-    flex: 0 0 100%;
-    text-align: center;
-  }
-  
-  .temple-image {
-    width: 70px;
-    height: 70px;
-  }
-  
-  .header-center {
-    flex: 0 0 100%;
-  }
-  
-  .header-right {
-    flex: 0 0 100%;
-    display: flex;
-    justify-content: center;
+  .header-content {
+    width: 100%;
   }
   
   .user-info {
-    width: auto;
-    min-width: 250px;
+    width: 100%;
+    justify-content: space-between;
   }
   
   .nav-tab {
     min-width: 100px;
-    padding: 10px 6px;
+    padding: 12px 8px;
     font-size: 14px;
-    gap: 5px;
+    gap: 6px;
   }
   
   .tab-icon {
-    font-size: 16px;
+    font-size: 18px;
   }
   
   .content-area {
-    padding: 15px;
+    padding: 20px;
+    margin-top: 15px;
+  }
+  
+  .footer {
+    padding: 20px;
+  }
+  
+  .footer-text {
+    font-size: 16px;
   }
 }
 
 /* Mobile Portrait (up to 575px) */
 @media (max-width: 575px) {
   .temple-header {
-    flex-direction: column;
-    padding: 10px;
-    gap: 8px;
-  }
-  
-  .header-left {
-    width: 100%;
-    text-align: center;
-  }
-  
-  .temple-image {
-    width: 60px;
-    height: 60px;
-  }
-  
-  .header-center {
-    width: 100%;
-    text-align: center;
+    padding: 12px 15px;
   }
   
   .temple-name {
@@ -357,14 +355,12 @@ html, body {
     font-size: 16px;
   }
   
-  .header-right {
-    width: 100%;
+  .festival-name::after {
+    width: 40px;
   }
   
   .user-info {
-    width: 100%;
-    justify-content: space-between;
-    padding: 6px 10px;
+    padding: 5px 12px;
   }
   
   .user-name {
@@ -372,12 +368,8 @@ html, body {
   }
   
   .logout-btn {
-    padding: 4px 10px;
-    font-size: 12px;
-  }
-  
-  .logout-icon {
-    font-size: 14px;
+    padding: 6px 15px;
+    font-size: 13px;
   }
   
   .nav-tabs {
@@ -394,11 +386,13 @@ html, body {
   }
   
   .tab-icon {
-    font-size: 14px;
+    font-size: 16px;
   }
   
   .content-area {
-    padding: 12px;
+    padding: 15px;
+    margin-top: 10px;
+    border-radius: 15px 15px 0 0;
   }
   
   .footer {
@@ -406,38 +400,22 @@ html, body {
   }
   
   .footer-text {
-    font-size: 13px;
+    font-size: 14px;
   }
   
   .copyright {
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 
 /* Small Mobile (up to 360px) */
 @media (max-width: 360px) {
-  .temple-image {
-    width: 50px;
-    height: 50px;
-  }
-  
   .temple-name {
     font-size: 16px;
   }
   
   .festival-name {
     font-size: 14px;
-  }
-  
-  .user-info {
-    flex-direction: column;
-    gap: 5px;
-    border-radius: 20px;
-  }
-  
-  .logout-btn {
-    width: 100%;
-    justify-content: center;
   }
   
   .nav-tab {
@@ -447,28 +425,36 @@ html, body {
   }
   
   .tab-icon {
+    font-size: 14px;
+  }
+  
+  .logout-text {
     display: none;
+  }
+  
+  .logout-btn {
+    padding: 6px 10px;
   }
 }
 
 /* Print Styles */
 @media print {
   .temple-header,
-  .nav-tabs,
   .footer {
-    background: #f97316 !important;
+    background: var(--saffron) !important;
     color: black !important;
     border: 1px solid #000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
   
-  .temple-image {
-    print-color-adjust: exact !important;
-  }
-  
   .logout-btn,
   .nav-tabs {
     display: none !important;
+  }
+  
+  .content-area {
+    box-shadow: none;
+    /* padding: 20px; */
   }
 }

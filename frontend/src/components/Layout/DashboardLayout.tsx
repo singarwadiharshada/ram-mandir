@@ -26,16 +26,19 @@ const DashboardLayout: React.FC = () => {
 
   return (
     <div className="dashboard-container">
-      {/* Temple Header - Simplified */}
+      {/* Header with Theme Colors */}
       <div className="temple-header">
-        <div className="header-top">
+        <div className="header-content">
           <h1 className="temple-name">श्री राम मंदिर, शाहूपुरी, कोल्हापूर</h1>
-          <h2 className="festival-name">श्री राम जन्मोत्सव २०२६</h2>
+          {/* <h2 className="festival-name">श्री राम जन्मोत्सव २०२६</h2> */}
         </div>
         
         {/* User Info positioned at top right */}
         <div className="user-info">
-          <span className="user-name">👤 {user.username || 'Admin'}</span>
+          <span className="user-name">
+            <span className="user-icon">👤</span>
+            {user.username || 'Admin'}
+          </span>
           <button onClick={handleLogout} className="logout-btn">
             <span className="logout-icon">🚪</span>
             <span className="logout-text">बाहेर पडा</span>
@@ -75,12 +78,12 @@ const DashboardLayout: React.FC = () => {
         </button>
       </div>
 
-      {/* Main Content Area - Establishment info will be in pages */}
+      {/* Main Content Area */}
       <div className="content-area">
         <Outlet />
       </div>
 
-      {/* Footer - Simplified */}
+      {/* Footer */}
       <div className="footer">
         <p className="footer-text">🏯 श्री राम मंदिर, शाहूपुरी, कोल्हापूर | स्थापना - १९२२</p>
         <p className="copyright">© २०२६ सर्व हक्क राखीव</p>

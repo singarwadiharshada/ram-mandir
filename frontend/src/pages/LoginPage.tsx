@@ -45,7 +45,6 @@ const LoginPage: React.FC = () => {
         <div className="login-box">
           <div className="temple-header">
             <h1>श्री राम मंदिर, शाहूपुरी, कोल्हापूर</h1>
-            <h2>श्री राम जन्मोत्सव २०२६</h2>
           </div>
 
           <div className="verification-box">
@@ -73,10 +72,7 @@ const LoginPage: React.FC = () => {
       <div className="login-box">
         <div className="temple-header">
           <h1>श्री राम मंदिर, शाहूपुरी, कोल्हापूर</h1>
-          <h2>श्री राम जन्मोत्सव २०२६</h2>
-          <div className="estab-info">
-            <p>स्थापना - 1922 रवि नं - पृ. -9</p>
-          </div>
+          
         </div>
 
         <h3>प्रशासक लॉगिन</h3>
