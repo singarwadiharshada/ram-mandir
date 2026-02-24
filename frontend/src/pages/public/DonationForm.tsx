@@ -107,77 +107,93 @@ const DonationForm: React.FC = () => {
   };
 
   // Create donation mutation with improved error handling
-  const createMutation = useMutation({
-    mutationFn: (data: typeof formData) => {
-      console.log('Submitting donation with data:', JSON.stringify(data, null, 2));
+// Create donation mutation with improved error handling
+const createMutation = useMutation({
+  mutationFn: (data: typeof formData) => {
+    console.log('Submitting donation with data:', JSON.stringify(data, null, 2));
+    
+    // Find the selected item to get its details
+    const selectedItemObj = items.find(i => i._id === data.item);
+    
+    // Base object with required fields for all services
+    const donationData: any = {
+      donorName: data.donorName,
+      mobile: data.mobile,
+      service: data.service,
+      address: data.address || '',
+    };
+    
+    // Add service-specific fields based on the updated schema
+    if (data.service === 'महाप्रसाद') {
+      // For Mahaprasad: send item, quantity, unit, but NO amount
+      donationData.item = data.item;
+      donationData.itemName = selectedItemObj?.name || '';
+      donationData.quantity = data.quantity;
+      donationData.unit = selectedItemObj?.unit || 'kg';
       
-      // Find the selected item to get its details
-      const selectedItemObj = items.find(i => i._id === data.item);
+      // IMPORTANT: Explicitly remove amount field if it exists
+      delete donationData.amount;
+    } else {
+      // For Abhishek/Other: send amount, but NO item/quantity/unit
+      donationData.amount = parseInt(data.amount) || 0;
       
-      // Base object with required fields for all services
-      const donationData: any = {
-        donorName: data.donorName,
-        mobile: data.mobile,
-        service: data.service,
-        address: data.address || '',
-      };
-      
-      // Add service-specific fields based on the updated schema
-      if (data.service === 'महाप्रसाद') {
-        // For Mahaprasad: send item, quantity, unit, but NO amount
-        donationData.item = data.item;
-        donationData.itemName = selectedItemObj?.name || '';
-        donationData.quantity = data.quantity;
-        donationData.unit = selectedItemObj?.unit || 'kg';
-        // Don't send amount field at all for Mahaprasad
-      } else {
-        // For Abhishek/Other: send amount, but NO item/quantity/unit
-        donationData.amount = parseInt(data.amount) || 0;
-        // Don't send item/quantity/unit fields at all for other services
-      }
-      
-      console.log('Processed donation data being sent:', JSON.stringify(donationData, null, 2));
-      return api.createPublicDonation(donationData);
-    },
-    onSuccess: (response) => {
-      console.log('Donation successful:', response);
-      playSuccessAudio();
-      
-      showToast('देणगी यशस्वीरित्या नोंदवली गेली! जय श्री राम! 🙏', 'success');
-      
-      setFormData({
-        donorName: '',
-        mobile: '',
-        service: 'महाप्रसाद',
-        item: '',
-        quantity: 1,
-        amount: '',
-        address: ''
-      });
-      setSelectedItem(null);
-      setCurrentPage(1);
-      
-      setTimeout(() => {
-        window.location.href = '/donation-success';
-      }, 2000);
-    },
-    onError: (error: any) => {
-      console.error('Full error object:', error);
-      console.error('Error response data:', error.response?.data);
-      
-      let errorMessage = 'काहीतरी चूक झाली. कृपया पुन्हा प्रयत्न करा.';
-      
-      if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.code === 'ERR_NETWORK') {
-        errorMessage = 'सर्व्हरशी संपर्क साधता आला नाही. कृपया नेटवर्क तपासा.';
-      }
-      
-      showToast(errorMessage, 'error');
+      // IMPORTANT: Explicitly remove item-related fields if they exist
+      delete donationData.item;
+      delete donationData.itemName;
+      delete donationData.quantity;
+      delete donationData.unit;
     }
-  });
+    
+    console.log('Processed donation data being sent:', JSON.stringify(donationData, null, 2));
+    
+    // Validation check
+    if (data.service === 'महाप्रसाद') {
+      console.log('Checking Mahaprasad donation - amount should be undefined:', donationData.amount);
+    } else {
+      console.log('Checking Abhishek/Other donation - amount should be number:', donationData.amount);
+    }
+    
+    return api.createPublicDonation(donationData);
+  },
+  onSuccess: (response) => {
+    console.log('Donation successful:', response);
+    playSuccessAudio();
+    
+    showToast('देणगी यशस्वीरित्या नोंदवली गेली! जय श्री राम! 🙏', 'success');
+    
+    setFormData({
+      donorName: '',
+      mobile: '',
+      service: 'महाप्रसाद',
+      item: '',
+      quantity: 1,
+      amount: '',
+      address: ''
+    });
+    setSelectedItem(null);
+    setCurrentPage(1);
+    
+    setTimeout(() => {
+      window.location.href = '/donation-success';
+    }, 2000);
+  },
+  onError: (error: any) => {
+    console.error('Full error object:', error);
+    console.error('Error response data:', error.response?.data);
+    
+    let errorMessage = 'काहीतरी चूक झाली. कृपया पुन्हा प्रयत्न करा.';
+    
+    if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.code === 'ERR_NETWORK') {
+      errorMessage = 'सर्व्हरशी संपर्क साधता आला नाही. कृपया नेटवर्क तपासा.';
+    }
+    
+    showToast(errorMessage, 'error');
+  }
+});
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
