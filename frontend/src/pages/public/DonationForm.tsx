@@ -5,6 +5,15 @@ import { PrasadItem, ServiceCategory } from '../../types';
 import Toast from '../../components/Toast';
 import './DonationForm.css';
 
+// Add this interface for the paginated response
+interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+}
+
 const DonationForm: React.FC = () => {
   const [formData, setFormData] = useState({
     donorName: '',
@@ -39,7 +48,7 @@ const DonationForm: React.FC = () => {
   }, []);
 
   // Fetch items for dropdown when service is महाप्रसाद
-  const { data: itemsData, isLoading, error } = useQuery<PrasadItem[]>({
+  const { data: itemsData, isLoading, error } = useQuery<PrasadItem[], Error>({
     queryKey: ['items', formData.service, currentPage, itemsPerPage],
     queryFn: async () => {
       console.log('Fetching items for dropdown:', formData.service);
@@ -63,15 +72,18 @@ const DonationForm: React.FC = () => {
           totalCount = response.length;
           console.log(`Found ${itemsArray.length} items (array response)`);
         } else if (response && typeof response === 'object') {
-          itemsArray = response.items || [];
-          totalCount = response.total || itemsArray.length;
+          // Properly type the response as PaginatedResponse
+          const paginatedResponse = response as PaginatedResponse<PrasadItem>;
+          itemsArray = paginatedResponse.items || [];
+          totalCount = paginatedResponse.total || itemsArray.length;
           console.log(`Found ${itemsArray.length} items (object response). Total: ${totalCount}`);
         }
         
-        // Store total count in a custom property on the array
-        (itemsArray as any).totalCount = totalCount;
+        // Create a new array with the totalCount property
+        const result = [...itemsArray];
+        (result as any).totalCount = totalCount;
         
-        return itemsArray;
+        return result;
       } catch (error) {
         console.error('Error fetching items:', error);
         throw error;
@@ -95,79 +107,77 @@ const DonationForm: React.FC = () => {
   };
 
   // Create donation mutation with improved error handling
-  // In DonationForm.tsx - update the mutationFn
-
-const createMutation = useMutation({
-  mutationFn: (data: typeof formData) => {
-    console.log('Submitting donation with data:', JSON.stringify(data, null, 2));
-    
-    // Find the selected item to get its details
-    const selectedItemObj = items.find(i => i._id === data.item);
-    
-    // Base object with required fields for all services
-    const donationData: any = {
-      donorName: data.donorName,
-      mobile: data.mobile,
-      service: data.service,
-      address: data.address || '',
-    };
-    
-    // Add service-specific fields based on the updated schema
-    if (data.service === 'महाप्रसाद') {
-      // For Mahaprasad: send item, quantity, unit, but NO amount
-      donationData.item = data.item;
-      donationData.itemName = selectedItemObj?.name || '';
-      donationData.quantity = data.quantity;
-      donationData.unit = selectedItemObj?.unit || 'kg';
-      // Don't send amount field at all for Mahaprasad
-    } else {
-      // For Abhishek/Other: send amount, but NO item/quantity/unit
-      donationData.amount = parseInt(data.amount) || 0;
-      // Don't send item/quantity/unit fields at all for other services
+  const createMutation = useMutation({
+    mutationFn: (data: typeof formData) => {
+      console.log('Submitting donation with data:', JSON.stringify(data, null, 2));
+      
+      // Find the selected item to get its details
+      const selectedItemObj = items.find(i => i._id === data.item);
+      
+      // Base object with required fields for all services
+      const donationData: any = {
+        donorName: data.donorName,
+        mobile: data.mobile,
+        service: data.service,
+        address: data.address || '',
+      };
+      
+      // Add service-specific fields based on the updated schema
+      if (data.service === 'महाप्रसाद') {
+        // For Mahaprasad: send item, quantity, unit, but NO amount
+        donationData.item = data.item;
+        donationData.itemName = selectedItemObj?.name || '';
+        donationData.quantity = data.quantity;
+        donationData.unit = selectedItemObj?.unit || 'kg';
+        // Don't send amount field at all for Mahaprasad
+      } else {
+        // For Abhishek/Other: send amount, but NO item/quantity/unit
+        donationData.amount = parseInt(data.amount) || 0;
+        // Don't send item/quantity/unit fields at all for other services
+      }
+      
+      console.log('Processed donation data being sent:', JSON.stringify(donationData, null, 2));
+      return api.createPublicDonation(donationData);
+    },
+    onSuccess: (response) => {
+      console.log('Donation successful:', response);
+      playSuccessAudio();
+      
+      showToast('देणगी यशस्वीरित्या नोंदवली गेली! जय श्री राम! 🙏', 'success');
+      
+      setFormData({
+        donorName: '',
+        mobile: '',
+        service: 'महाप्रसाद',
+        item: '',
+        quantity: 1,
+        amount: '',
+        address: ''
+      });
+      setSelectedItem(null);
+      setCurrentPage(1);
+      
+      setTimeout(() => {
+        window.location.href = '/donation-success';
+      }, 2000);
+    },
+    onError: (error: any) => {
+      console.error('Full error object:', error);
+      console.error('Error response data:', error.response?.data);
+      
+      let errorMessage = 'काहीतरी चूक झाली. कृपया पुन्हा प्रयत्न करा.';
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.code === 'ERR_NETWORK') {
+        errorMessage = 'सर्व्हरशी संपर्क साधता आला नाही. कृपया नेटवर्क तपासा.';
+      }
+      
+      showToast(errorMessage, 'error');
     }
-    
-    console.log('Processed donation data being sent:', JSON.stringify(donationData, null, 2));
-    return api.createPublicDonation(donationData);
-  },
-  onSuccess: (response) => {
-    console.log('Donation successful:', response);
-    playSuccessAudio();
-    
-    showToast('देणगी यशस्वीरित्या नोंदवली गेली! जय श्री राम! 🙏', 'success');
-    
-    setFormData({
-      donorName: '',
-      mobile: '',
-      service: 'महाप्रसाद',
-      item: '',
-      quantity: 1,
-      amount: '',
-      address: ''
-    });
-    setSelectedItem(null);
-    setCurrentPage(1);
-    
-    setTimeout(() => {
-      window.location.href = '/donation-success';
-    }, 2000);
-  },
-  onError: (error: any) => {
-    console.error('Full error object:', error);
-    console.error('Error response data:', error.response?.data);
-    
-    let errorMessage = 'काहीतरी चूक झाली. कृपया पुन्हा प्रयत्न करा.';
-    
-    if (error.response?.data?.error) {
-      errorMessage = error.response.data.error;
-    } else if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    } else if (error.code === 'ERR_NETWORK') {
-      errorMessage = 'सर्व्हरशी संपर्क साधता आला नाही. कृपया नेटवर्क तपासा.';
-    }
-    
-    showToast(errorMessage, 'error');
-  }
-});
+  });
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
