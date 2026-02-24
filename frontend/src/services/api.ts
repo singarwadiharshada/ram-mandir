@@ -79,8 +79,13 @@ class ApiService {
     return this.api.get('/auth/me');
   }
 
-  // Item APIs
-  async getItems(params?: { category?: string; search?: string }): Promise<PrasadItem[]> {
+  // Item APIs - UPDATED with pagination support
+  async getItems(params?: { 
+    category?: string; 
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PrasadItem[]> {
     return this.api.get('/items', { params });
   }
 
@@ -100,8 +105,13 @@ class ApiService {
     return this.api.get('/items/stats/summary');
   }
 
-  // Donation APIs
-  async getDonations(params?: { category?: string; search?: string }): Promise<Donation[]> {
+  // Donation APIs - UPDATED with pagination support
+  async getDonations(params?: { 
+    category?: string; 
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<Donation[]> {
     return this.api.get('/donations', { params });
   }
 
@@ -151,9 +161,14 @@ class ApiService {
     return this.api.put('/auth/change-password', data);
   }
 
-  // Service APIs
-  async getServices(): Promise<Service[]> {
-    return this.api.get('/services');
+  // Service APIs - UPDATED with pagination support
+  async getServices(params?: { 
+    category?: string; 
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<Service[]> {
+    return this.api.get('/services', { params });
   }
 
   async createService(service: Omit<Service, '_id' | 'createdAt' | 'updatedAt'>): Promise<Service> {
@@ -168,8 +183,13 @@ class ApiService {
     return this.api.delete(`/services/${id}`);
   }
   
-  // Public endpoints (no authentication required)
-  async getPublicItems(params?: { category?: string; search?: string }): Promise<PrasadItem[]> {
+  // Public endpoints - UPDATED with pagination support
+  async getPublicItems(params?: { 
+    category?: string; 
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PrasadItem[]> {
     console.log('Calling getPublicItems with params:', params);
     return this.api.get('/public/items', { params });
   }
