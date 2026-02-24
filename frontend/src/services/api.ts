@@ -16,7 +16,7 @@ class ApiService {
 
     this.api.interceptors.request.use(this.handleRequest.bind(this));
     this.api.interceptors.response.use(
-      response => response.data,
+      this.handleResponse.bind(this),  // Changed from response => response.data
       this.handleError.bind(this)
     );
   }
@@ -26,16 +26,48 @@ class ApiService {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log(`Making ${config.method?.toUpperCase()} request to:`, config.url);
     return config;
   }
 
+  private handleResponse(response: any) {
+    console.log('Response received:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    });
+    return response.data; // Still return just the data for successful responses
+  }
+
   private handleError(error: AxiosError) {
+    console.error('API Error:', {
+      message: error.message,
+      code: error.code,
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data
+    });
+
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
-    return Promise.reject(error.response?.data || error);
+    
+    // Return the full error object with response data
+    return Promise.reject({
+      message: error.message,
+      code: error.code,
+      response: error.response ? {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data
+      } : undefined,
+      request: error.request,
+      config: error.config
+    });
   }
 
   // Auth APIs
@@ -85,45 +117,40 @@ class ApiService {
     return this.api.get('/donations/stats/summary');
   }
 
+  // Admin APIs
+  async getAdmins(): Promise<Admin[]> {
+    return this.api.get('/admins');
+  }
 
-  // Add to your ApiService class:
+  async getCurrentAdmin(): Promise<User> {
+    return this.api.get('/admins/profile');
+  }
 
-// Admin APIs
-// Add to your ApiService class:
+  async createAdmin(admin: { 
+    username: string; 
+    email: string; 
+    password: string; 
+    role?: 'admin' | 'super_admin' 
+  }): Promise<Admin> {
+    return this.api.post('/admins', admin);
+  }
 
-// Admin APIs
-async getAdmins(): Promise<Admin[]> {
-  return this.api.get('/admins');
-}
+  async updateAdmin(id: string, admin: Partial<Admin> & { password?: string }): Promise<Admin> {
+    return this.api.put(`/admins/${id}`, admin);
+  }
 
-async getCurrentAdmin(): Promise<User> {
-  return this.api.get('/admins/profile');
-}
+  async deleteAdmin(id: string): Promise<{ message: string }> {
+    return this.api.delete(`/admins/${id}`);
+  }
 
-async createAdmin(admin: { 
-  username: string; 
-  email: string; 
-  password: string; 
-  role?: 'admin' | 'super_admin' 
-}): Promise<Admin> {
-  return this.api.post('/admins', admin);
-}
+  async toggleAdminStatus(id: string): Promise<Admin> {
+    return this.api.patch(`/admins/${id}/toggle-status`);
+  }
 
-async updateAdmin(id: string, admin: Partial<Admin> & { password?: string }): Promise<Admin> {
-  return this.api.put(`/admins/${id}`, admin);
-}
+  async changePassword(data: { currentPassword: string; newPassword: string }): Promise<{ message: string }> {
+    return this.api.put('/auth/change-password', data);
+  }
 
-async deleteAdmin(id: string): Promise<{ message: string }> {
-  return this.api.delete(`/admins/${id}`);
-}
-
-async toggleAdminStatus(id: string): Promise<Admin> {
-  return this.api.patch(`/admins/${id}/toggle-status`);
-}
-
-async changePassword(data: { currentPassword: string; newPassword: string }): Promise<{ message: string }> {
-  return this.api.put('/auth/change-password', data);
-}
   // Service APIs
   async getServices(): Promise<Service[]> {
     return this.api.get('/services');
@@ -141,16 +168,16 @@ async changePassword(data: { currentPassword: string; newPassword: string }): Pr
     return this.api.delete(`/services/${id}`);
   }
   
-  // Add these to your ApiService class:
+  // Public endpoints (no authentication required)
+  async getPublicItems(params?: { category?: string; search?: string }): Promise<PrasadItem[]> {
+    console.log('Calling getPublicItems with params:', params);
+    return this.api.get('/public/items', { params });
+  }
 
-// Public endpoints (no authentication required)
-async getPublicItems(params?: { category?: string; search?: string }): Promise<PrasadItem[]> {
-  return this.api.get('/public/items', { params });
-}
-
-async createPublicDonation(donation: Omit<Donation, '_id' | 'date' | 'itemName' | 'unit'>): Promise<Donation> {
-  return this.api.post('/public/donations', donation);
-}
+  async createPublicDonation(donation: Omit<Donation, '_id' | 'date' | 'itemName' | 'unit'>): Promise<Donation> {
+    console.log('Calling createPublicDonation with data:', donation);
+    return this.api.post('/public/donations', donation);
+  }
 }
 
 export default new ApiService();
