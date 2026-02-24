@@ -33,10 +33,10 @@ router.get('/items', async (req, res) => {
 // Public donation endpoint (no auth)
 router.post('/donations', async (req, res) => {
   try {
-    // Validate required fields
-    if (!req.body.donorName || !req.body.mobile || !req.body.item || !req.body.amount) {
+    // Basic required fields for ALL donations
+    if (!req.body.donorName || !req.body.mobile || !req.body.service) {
       return res.status(400).json({ 
-        error: 'सर्व आवश्यक माहिती भरा' 
+        error: 'देणगीदाराचे नाव, मोबाईल नंबर आणि सेवा आवश्यक आहे' 
       });
     }
 
@@ -47,44 +47,89 @@ router.post('/donations', async (req, res) => {
       });
     }
 
-    const item = await PrasadItem.findById(req.body.item);
-    if (!item) {
-      return res.status(404).json({ error: 'वस्तू सापडली नाही' });
-    }
+    // Service-specific validation
+    if (req.body.service === 'महाप्रसाद') {
+      // Mahaprasad requires item but NOT amount
+      if (!req.body.item) {
+        return res.status(400).json({ 
+          error: 'कृपया वस्तू निवडा' 
+        });
+      }
 
-    const requestedQty = parseFloat(req.body.quantity);
-    if (isNaN(requestedQty) || requestedQty <= 0) {
-      return res.status(400).json({ 
-        error: 'प्रमाण योग्य संख्या असावी' 
+      const item = await PrasadItem.findById(req.body.item);
+      if (!item) {
+        return res.status(404).json({ error: 'वस्तू सापडली नाही' });
+      }
+
+      const requestedQty = parseFloat(req.body.quantity);
+      if (isNaN(requestedQty) || requestedQty <= 0) {
+        return res.status(400).json({ 
+          error: 'प्रमाण योग्य संख्या असावी' 
+        });
+      }
+
+      const remaining = item.required - item.received;
+      if (requestedQty > remaining) {
+        return res.status(400).json({ 
+          error: `फक्त ${remaining.toFixed(3)} ${item.unit} उपलब्ध आहे` 
+        });
+      }
+
+      const donationData = {
+        donorName: req.body.donorName,
+        mobile: req.body.mobile,
+        service: req.body.service,
+        item: item._id,
+        itemName: item.name,
+        quantity: requestedQty,
+        unit: item.unit,
+        amount: 0, // Set amount to 0 for Mahaprasad
+        address: req.body.address || '',
+        date: new Date()
+      };
+
+      const donation = await Donation.create(donationData);
+      
+      res.status(201).json({ 
+        message: 'देणगी यशस्वी',
+        donationId: donation._id 
+      });
+
+    } else {
+      // Abhishek/Other - requires amount but NOT item
+      if (!req.body.amount) {
+        return res.status(400).json({ 
+          error: 'कृपया देणगी रक्कम भरा' 
+        });
+      }
+
+      const amount = parseFloat(req.body.amount);
+      if (isNaN(amount) || amount < 100 || amount > 1000) {
+        return res.status(400).json({ 
+          error: 'कृपया रु.१०० ते रु.१००० दरम्यान रक्कम भरा' 
+        });
+      }
+
+      const donationData = {
+        donorName: req.body.donorName,
+        mobile: req.body.mobile,
+        service: req.body.service,
+        item: null, // No item for non-Mahaprasad
+        itemName: '',
+        quantity: 0,
+        unit: 'kg', // Default unit
+        amount: amount,
+        address: req.body.address || '',
+        date: new Date()
+      };
+
+      const donation = await Donation.create(donationData);
+      
+      res.status(201).json({ 
+        message: 'देणगी यशस्वी',
+        donationId: donation._id 
       });
     }
-
-    const remaining = item.required - item.received;
-    if (requestedQty > remaining) {
-      return res.status(400).json({ 
-        error: `फक्त ${remaining.toFixed(3)} ${item.unit} उपलब्ध आहे` 
-      });
-    }
-
-    const donationData = {
-      donorName: req.body.donorName,
-      mobile: req.body.mobile,
-      service: req.body.service || item.category,
-      item: item._id,
-      itemName: item.name,
-      quantity: requestedQty,
-      unit: item.unit,
-      amount: parseFloat(req.body.amount) || 0,
-      address: req.body.address || '',
-      date: new Date()
-    };
-
-    const donation = await Donation.create(donationData);
-    
-    res.status(201).json({ 
-      message: 'देणगी यशस्वी',
-      donationId: donation._id 
-    });
   } catch (error) {
     console.error('Public donation error:', error);
     res.status(400).json({ error: error.message });
