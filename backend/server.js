@@ -7,14 +7,12 @@ dotenv.config();
 
 const app = express();
 
-// ============ UPDATED CORS CONFIGURATION ============
-// Allow multiple origins including your Netlify frontend
+// ============ FIXED CORS CONFIGURATION ============
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5000',
-  'https://rammandir2026.netlify.app', // Your Netlify frontend
-  'https://ram-mandir-back.onrender.com', // Your Render backend (if needed)
-  /\.netlify\.app$/ // This regex allows ALL Netlify apps (useful for preview deployments)
+  'https://rammandir2026.netlify.app',  // Your Netlify frontend
+  /\.netlify\.app$/  // Allows all Netlify preview deployments
 ];
 
 app.use(cors({
@@ -22,11 +20,8 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
     
-    // Check if origin is allowed
     if (allowedOrigins.some(allowed => {
-      if (allowed instanceof RegExp) {
-        return allowed.test(origin);
-      }
+      if (allowed instanceof RegExp) return allowed.test(origin);
       return allowed === origin;
     })) {
       callback(null, true);
@@ -35,28 +30,24 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true, // Allow cookies/auth headers
+  credentials: true,
   optionsSuccessStatus: 200
 }));
 
-// ============ ADDITIONAL SECURITY HEADERS ============
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
+// Handle preflight requests
+app.options('*', cors());
 
 // Middleware
 app.use(express.json());
 
-// Import models (to register them with mongoose)
+// Import models
 require('./models/Admin');
 require('./models/PrasadItem');
 require('./models/Donation');
 require('./models/Service');
+
+// ============ FIXED PORT HANDLING FOR RENDER ============
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI)
@@ -65,11 +56,7 @@ mongoose.connect(process.env.MONGODB_URI)
     console.log('📊 Database:', mongoose.connection.name);
   })
   .catch(err => {
-    console.log('❌ MongoDB Error:', err);
-    console.log('💡 Make sure:');
-    console.log('   1. Your IP is whitelisted in MongoDB Atlas');
-    console.log('   2. Username and password are correct');
-    console.log('   3. Connection string is correct');
+    console.log('❌ MongoDB Error:', err.message);
   });
 
 // Basic route
@@ -78,16 +65,14 @@ app.get('/', (req, res) => {
     message: 'श्री राम मंदिर API',
     status: 'running',
     timestamp: new Date(),
-    environment: process.env.NODE_ENV || 'development',
-    frontend: 'https://rammandir2026.netlify.app/',
-    backend: 'https://ram-mandir-back.onrender.com/'
+    frontend: 'https://rammandir2026.netlify.app'
   });
 });
 
-// Test route to verify CORS is working
+// Test route
 app.get('/api/test', (req, res) => {
   res.json({ 
-    message: 'CORS is working correctly!',
+    message: 'CORS is working!',
     origin: req.headers.origin || 'No origin'
   });
 });
@@ -100,30 +85,19 @@ app.use('/api/donations', require('./routes/donations'));
 app.use('/api/services', require('./routes/services'));
 app.use('/api/public', require('./routes/public'));
 
-// Error handling middleware
+// Error handling
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err.message);
-  if (err.message === 'Not allowed by CORS') {
-    return res.status(403).json({ 
-      error: 'CORS Error', 
-      message: 'Origin not allowed',
-      origin: req.headers.origin 
-    });
-  }
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({ error: 'Server error' });
 });
 
-// Handle 404 routes
+// 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({ 
-    error: 'Not found',
-    path: req.originalUrl 
-  });
+  res.status(404).json({ error: 'Not found' });
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+// Start server
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🔗 CORS enabled for: ${allowedOrigins.filter(o => typeof o === 'string').join(', ')}`);
-  console.log(`🌐 Netlify frontend: https://rammandir2026.netlify.app/`);
+  console.log(`🔗 Allowed origins: ${allowedOrigins.filter(o => typeof o === 'string').join(', ')}`);
 });
