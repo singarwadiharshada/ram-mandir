@@ -75,6 +75,7 @@ router.post('/donations', async (req, res) => {
         });
       }
 
+      // IMPORTANT FIX: Don't include amount field at all for Mahaprasad
       const donationData = {
         donorName: req.body.donorName,
         mobile: req.body.mobile,
@@ -83,9 +84,9 @@ router.post('/donations', async (req, res) => {
         itemName: item.name,
         quantity: requestedQty,
         unit: item.unit,
-        amount: 0, // Set amount to 0 for Mahaprasad
         address: req.body.address || '',
         date: new Date()
+        // amount field is completely omitted
       };
 
       const donation = await Donation.create(donationData);
@@ -110,17 +111,15 @@ router.post('/donations', async (req, res) => {
         });
       }
 
+      // For Abhishek/Other, create donation with amount
       const donationData = {
         donorName: req.body.donorName,
         mobile: req.body.mobile,
         service: req.body.service,
-        item: null, // No item for non-Mahaprasad
-        itemName: '',
-        quantity: 0,
-        unit: 'kg', // Default unit
         amount: amount,
         address: req.body.address || '',
         date: new Date()
+        // item-related fields are omitted
       };
 
       const donation = await Donation.create(donationData);
