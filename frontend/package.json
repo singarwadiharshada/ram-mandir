@@ -1,6 +1,7 @@
 {
   "name": "shriram-mandir-frontend",
   "version": "1.0.0",
+  "homepage": ".",
   "private": true,
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
