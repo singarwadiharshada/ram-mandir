@@ -12,7 +12,7 @@ const prasadItemSchema = new mongoose.Schema({
   },
   unit: {
     type: String,
-    enum: ['kg', 'piece', 'liter'],
+    enum: ['kg', 'piece', 'liter', 'gram'],  // Added 'gram' to enum
     required: [true, 'एकक आवश्यक आहे']
   },
   required: {
