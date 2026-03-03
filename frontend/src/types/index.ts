@@ -1,5 +1,5 @@
 export type ServiceCategory = 'महाप्रसाद' | 'अभिषेक' | 'इतर';
-export type UnitType = 'kg' | 'piece' | 'liter';
+export type UnitType = 'kg' |'gram'| 'piece' | 'liter';
 export type UserRole = 'super_admin' | 'admin';
 
 export interface PrasadItem {

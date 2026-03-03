@@ -148,6 +148,7 @@ const ItemModal: React.FC<ItemModalProps> = ({ item, onClose, onSuccess, showToa
               required
             >
               <option value="kg">किलो (kg)</option>
+              <option value="gram">ग्रॅम (gram)</option>
               <option value="piece">नग (piece)</option>
               <option value="liter">लिटर (liter)</option>
             </select>

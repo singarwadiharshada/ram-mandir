@@ -5,11 +5,13 @@ import api from '../services/api';
 import { PrasadItem, ItemStats, ServiceCategory, UnitType } from '../types';
 import ItemModal from '../components/ItemModal';
 import Toast from '../components/Toast';
+import { generatePrasadItemsPDF, generateSimplePrasadItemsPDF } from '../utils/prasadItemsPdfGenerator';
 import './PrasadItemsPage.css';
 
 const PrasadItemsPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<PrasadItem | null>(null);
+  const [showPDFOptions, setShowPDFOptions] = useState(false);
   const [filters, setFilters] = useState({ category: 'all', search: '' });
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ 
     show: false, 
@@ -40,11 +42,34 @@ const PrasadItemsPage: React.FC = () => {
       try {
         return await api.importItems(file);
       } catch (error: any) {
+        // Log the full error for debugging
+        console.error('Import error details:', error);
+        
+        // If we have a response data with message
+        if (error.data) {
+          if (error.data.message) {
+            throw new Error(error.data.message);
+          }
+          if (error.data.error) {
+            throw new Error(error.data.error);
+          }
+          if (typeof error.data === 'string') {
+            throw new Error(error.data);
+          }
+        }
+        
         // If 404, provide a helpful message
         if (error.status === 404) {
           throw new Error('इम्पोर्ट API उपलब्ध नाही. कृपया थेट फॉर्म वापरून वस्तू जोडा.');
         }
-        throw error;
+        
+        // If 500, provide a generic message
+        if (error.status === 500) {
+          throw new Error('सर्व्हर त्रुटी. कृपया नंतर पुन्हा प्रयत्न करा किंवा व्यवस्थापकाशी संपर्क साधा.');
+        }
+        
+        // Default error
+        throw new Error(error.message || 'अपलोड करताना त्रुटी आली');
       }
     },
     onSuccess: (data) => {
@@ -52,10 +77,12 @@ const PrasadItemsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['itemStats'] });
       
       if (data.failed > 0) {
-        showToastMessage(
-          `${data.imported} वस्तू यशस्वी, ${data.failed} वस्तू अयशस्वी`,
-          'error'
-        );
+        // Show errors in a more detailed way
+        const errorMessage = data.errors?.length 
+          ? `${data.imported} वस्तू यशस्वी, ${data.failed} वस्तू अयशस्वी\n\n${data.errors.slice(0, 3).join('\n')}${data.errors.length > 3 ? '\n...आणि इतर' : ''}`
+          : `${data.imported} वस्तू यशस्वी, ${data.failed} वस्तू अयशस्वी`;
+        
+        showToastMessage(errorMessage, 'error');
       } else {
         showToastMessage(`${data.imported} वस्तू यशस्वीरित्या अपलोड झाल्या`, 'success');
       }
@@ -67,7 +94,8 @@ const PrasadItemsPage: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      const errorMsg = error.response?.data?.message || error.message || 'अपलोड करताना त्रुटी आली';
+      console.error('Mutation error:', error);
+      const errorMsg = error.message || 'अपलोड करताना त्रुटी आली';
       showToastMessage(errorMsg, 'error');
       setUploading(false);
     }
@@ -110,14 +138,24 @@ const PrasadItemsPage: React.FC = () => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Check file type
+      // Check file type by extension
       const fileExt = file.name.split('.').pop()?.toLowerCase();
       if (!['xlsx', 'xls', 'csv'].includes(fileExt || '')) {
         showToastMessage('कृपया .xlsx, .xls किंवा .csv फाइल निवडा', 'error');
         event.target.value = '';
         return;
       }
+      
+      // Check file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        showToastMessage(`फाइल खूप मोठी आहे (${(file.size / 1024 / 1024).toFixed(2)}MB). कमाल आकार 10MB आहे.`, 'error');
+        event.target.value = '';
+        return;
+      }
+      
       setSelectedFile(file);
+      showToastMessage(`फाइल निवडली: ${file.name}`, 'success');
     }
   };
 
@@ -129,6 +167,40 @@ const PrasadItemsPage: React.FC = () => {
 
     setUploading(true);
     bulkUploadMutation.mutate(selectedFile);
+  };
+
+  // ========== PDF GENERATION FUNCTIONS ==========
+
+  const handlePDFDownload = () => {
+    if (items.length === 0) {
+      showToastMessage('PDF डाउनलोड करण्यासाठी कोणतीही वस्तू नाही', 'error');
+      return;
+    }
+
+    try {
+      generatePrasadItemsPDF({ items, stats, filters });
+      showToastMessage('PDF यशस्वीरित्या डाउनलोड होत आहे', 'success');
+      setShowPDFOptions(false);
+    } catch (error) {
+      showToastMessage('PDF डाउनलोड करताना त्रुटी', 'error');
+      console.error('PDF generation error:', error);
+    }
+  };
+
+  const handleSimplePDFDownload = () => {
+    if (items.length === 0) {
+      showToastMessage('PDF डाउनलोड करण्यासाठी कोणतीही वस्तू नाही', 'error');
+      return;
+    }
+
+    try {
+      generateSimplePrasadItemsPDF(items, 'प्रसाद वस्तू यादी');
+      showToastMessage('PDF यशस्वीरित्या डाउनलोड होत आहे', 'success');
+      setShowPDFOptions(false);
+    } catch (error) {
+      showToastMessage('PDF डाउनलोड करताना त्रुटी', 'error');
+      console.error('PDF generation error:', error);
+    }
   };
 
   // Parse Excel/CSV file locally as fallback
@@ -160,34 +232,27 @@ const PrasadItemsPage: React.FC = () => {
               if (values.length >= 4) {
                 // Map category to valid ServiceCategory type
                 const categoryStr = values[categoryIndex] || '';
-                let category: ServiceCategory = 'इतर'; // Default
+                let category: ServiceCategory = 'इतर';
                 if (categoryStr.includes('महाप्रसाद') || categoryStr.toLowerCase().includes('mahaprasad')) {
                   category = 'महाप्रसाद';
                 } else if (categoryStr.includes('अभिषेक') || categoryStr.toLowerCase().includes('abhishek')) {
                   category = 'अभिषेक';
                 }
                 
-                // Map unit to valid UnitType - FIXED: 'g' is not a valid UnitType, map to 'kg' instead
-                const unitStr = values[unitIndex]?.toLowerCase() || 'kg';
-                let unit: UnitType = 'kg'; // Default
+                // Map unit to valid UnitType
+                const unitStr = values[unitIndex]?.toString().toLowerCase() || 'kg';
+                let unit: UnitType = 'kg';
                 if (unitStr.includes('kg') || unitStr.includes('किलो')) {
                   unit = 'kg';
-                } else if (unitStr.includes('g') || unitStr.includes('ग्रॅम')) {
-                  // Convert grams to kg (assuming 1000g = 1kg) or just use kg
-                  unit = 'kg';
+                } else if (unitStr.includes('g') || unitStr.includes('ग्रॅम') || unitStr === 'gram') {
+                  unit = 'gram';
                 } else if (unitStr.includes('liter') || unitStr.includes('l') || unitStr.includes('लीटर')) {
                   unit = 'liter';
                 } else if (unitStr.includes('piece') || unitStr.includes('पीस') || unitStr.includes('pcs')) {
                   unit = 'piece';
                 }
                 
-                // Parse required quantity and convert if needed
                 let required = parseFloat(values[requiredIndex]) || 0;
-                
-                // If unit was grams, convert to kg
-                if (unitStr.includes('g') && !unitStr.includes('kg')) {
-                  required = required / 1000; // Convert grams to kg
-                }
                 
                 items.push({
                   name: values[nameIndex] || '',
@@ -227,34 +292,27 @@ const PrasadItemsPage: React.FC = () => {
               
               // Map category to valid ServiceCategory type
               const categoryStr = row[categoryIndex]?.toString() || '';
-              let category: ServiceCategory = 'इतर'; // Default
+              let category: ServiceCategory = 'इतर';
               if (categoryStr.includes('महाप्रसाद') || categoryStr.toLowerCase().includes('mahaprasad')) {
                 category = 'महाप्रसाद';
               } else if (categoryStr.includes('अभिषेक') || categoryStr.toLowerCase().includes('abhishek')) {
                 category = 'अभिषेक';
               }
               
-              // Map unit to valid UnitType - FIXED: 'g' is not a valid UnitType, map to 'kg' instead
+              // Map unit to valid UnitType
               const unitStr = row[unitIndex]?.toString().toLowerCase() || 'kg';
-              let unit: UnitType = 'kg'; // Default
+              let unit: UnitType = 'kg';
               if (unitStr.includes('kg') || unitStr.includes('किलो')) {
                 unit = 'kg';
-              } else if (unitStr.includes('g') || unitStr.includes('ग्रॅम')) {
-                // Convert grams to kg (assuming 1000g = 1kg) or just use kg
-                unit = 'kg';
+              } else if (unitStr.includes('g') || unitStr.includes('ग्रॅम') || unitStr === 'gram') {
+                unit = 'gram';
               } else if (unitStr.includes('liter') || unitStr.includes('l') || unitStr.includes('लीटर')) {
                 unit = 'liter';
               } else if (unitStr.includes('piece') || unitStr.includes('पीस') || unitStr.includes('pcs')) {
                 unit = 'piece';
               }
               
-              // Parse required quantity and convert if needed
               let required = parseFloat(row[requiredIndex]) || 0;
-              
-              // If unit was grams, convert to kg
-              if (unitStr.includes('g') && !unitStr.includes('kg')) {
-                required = required / 1000; // Convert grams to kg
-              }
               
               items.push({
                 name: row[nameIndex]?.toString() || '',
@@ -317,14 +375,17 @@ const PrasadItemsPage: React.FC = () => {
 
   // Local template generation function
   const generateLocalTemplate = (format: 'xlsx' | 'csv') => {
-    // Template data - FIXED: Removed 'g' as it's not a valid UnitType
+    // Template data with gram examples
     const templateData = [
       ['वस्तूचे नाव', 'श्रेणी', 'एकक', 'आवश्यक प्रमाण'],
       ['तांदूळ', 'महाप्रसाद', 'kg', '100'],
       ['साखर', 'महाप्रसाद', 'kg', '50'],
+      ['केळी', 'इतर', 'gram', '500'],
       ['दूध', 'अभिषेक', 'liter', '20'],
+      ['मसाला', 'इतर', 'gram', '250'],
       ['फळे', 'इतर', 'kg', '30'],
-      ['नारळ', 'इतर', 'piece', '10']
+      ['नारळ', 'इतर', 'piece', '10'],
+      ['तूप', 'महाप्रसाद', 'gram', '1000']
     ];
 
     if (format === 'xlsx') {
@@ -395,12 +456,16 @@ const PrasadItemsPage: React.FC = () => {
 
   const mapUnit = (unit: string): UnitType => {
     const unitLower = unit.toLowerCase();
-    if (unitLower.includes('liter') || unitLower.includes('l') || unitLower.includes('लीटर')) {
+    if (unitLower.includes('kg') || unitLower.includes('किलो')) {
+      return 'kg';
+    } else if (unitLower.includes('g') || unitLower.includes('ग्रॅम') || unitLower === 'gram') {
+      return 'gram';
+    } else if (unitLower.includes('liter') || unitLower.includes('l') || unitLower.includes('लीटर')) {
       return 'liter';
     } else if (unitLower.includes('piece') || unitLower.includes('पीस') || unitLower.includes('pcs')) {
       return 'piece';
     } else {
-      return 'kg'; // Default to kg for anything else including grams
+      return 'kg'; // Default
     }
   };
 
@@ -416,13 +481,43 @@ const PrasadItemsPage: React.FC = () => {
     return item.received >= item.required;
   };
 
+  const formatUnit = (unit: UnitType): string => {
+    const unitMap: Record<UnitType, string> = {
+      'kg': 'किलो',
+      'gram': 'ग्रॅम',
+      'liter': 'लीटर',
+      'piece': 'पीस'
+    };
+    return unitMap[unit] || unit;
+  };
+
   return (
     <div className="items-page">
       <div className="page-header">
         <h2>प्रसाद वस्तू व्यवस्थापन <span>प्रसाद वस्तू जोडा, संपादित करा किंवा काढा</span></h2>
-        <button className="btn-primary" onClick={() => setShowModal(true)}>
-          + नवीन वस्तू जोडा
-        </button>
+        <div className="header-actions">
+          <div className="pdf-dropdown">
+            <button 
+              className="btn-secondary" 
+              onClick={() => setShowPDFOptions(!showPDFOptions)}
+            >
+              📄 PDF डाउनलोड करा ▼
+            </button>
+            {showPDFOptions && (
+              <div className="pdf-dropdown-menu">
+                <button onClick={handlePDFDownload}>
+                  संपूर्ण अहवाल (सारांश सह)
+                </button>
+                <button onClick={handleSimplePDFDownload}>
+                  फक्त यादी (सोपी)
+                </button>
+              </div>
+            )}
+          </div>
+          <button className="btn-primary" onClick={() => setShowModal(true)}>
+            + नवीन वस्तू जोडा
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -500,9 +595,9 @@ const PrasadItemsPage: React.FC = () => {
                           {item.category}
                         </span>
                       </td>
-                      <td>{item.required} {item.unit}</td>
-                      <td>{item.received} {item.unit}</td>
-                      <td>{remaining} {item.unit}</td>
+                      <td>{item.required} {formatUnit(item.unit)}</td>
+                      <td>{item.received} {formatUnit(item.unit)}</td>
+                      <td>{remaining} {formatUnit(item.unit)}</td>
                       <td>
                         <div className="progress-container">
                           <div className="progress-bar-bg">
@@ -556,9 +651,11 @@ const PrasadItemsPage: React.FC = () => {
           <br />
           <strong>श्रेणी:</strong> महाप्रसाद / mahaprasad, अभिषेक / abhishek, इतर / other
           <br />
-          <strong>एकक:</strong> kg, liter, piece (फक्त हीच एकके स्वीकार्य आहेत)
+          <strong>एकक:</strong> kg, gram, liter, piece (फक्त हीच एकके स्वीकार्य आहेत)
           <br />
-          <strong>प्रमाण:</strong> दशांश मूल्ये स्वीकार्य (उदा. 5.500, 10.250)
+          <strong>प्रमाण:</strong> दशांश मूल्ये स्वीकार्य (उदा. 5.500, 10.250, 250.500)
+          <br />
+          <strong>कमाल फाइल आकार:</strong> 10MB
         </p>
         
         <div className="file-upload">

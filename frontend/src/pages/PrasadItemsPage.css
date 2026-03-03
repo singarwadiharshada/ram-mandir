@@ -275,3 +275,71 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* Add to PrasadItemsPage.css */
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.pdf-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.pdf-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: white;
+  min-width: 220px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  z-index: 1000;
+  margin-top: 5px;
+  overflow: hidden;
+}
+
+.pdf-dropdown-menu button {
+  width: 100%;
+  padding: 12px 16px;
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s;
+}
+
+.pdf-dropdown-menu button:last-child {
+  border-bottom: none;
+}
+
+.pdf-dropdown-menu button:hover {
+  background-color: #f5f5f5;
+  color: #f97316;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 24px;
+  color: #333;
+}
+
+.page-header h2 span {
+  font-size: 14px;
+  color: #666;
+  margin-left: 10px;
+  font-weight: normal;
+}
