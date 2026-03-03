@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
 import api from '../services/api';
-import { PrasadItem, ItemStats, ServiceCategory, UnitType } from '../types';
+import { PrasadItem, ItemStats, UnitType } from '../types';
 import ItemModal from '../components/ItemModal';
 import Toast from '../components/Toast';
 import { generatePrasadItemsPDF, generateSimplePrasadItemsPDF } from '../utils/prasadItemsPdfGenerator';
@@ -203,6 +203,32 @@ const PrasadItemsPage: React.FC = () => {
     }
   };
 
+  const downloadTemplate = async (format: 'xlsx' | 'csv') => {
+    try {
+      // Convert format to the type expected by the API (excel/csv)
+      const apiFormat: 'excel' | 'csv' = format === 'xlsx' ? 'excel' : 'csv';
+      
+      // Try to get template from API first
+      const blob = await api.getImportTemplate(apiFormat);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `prasad_items_template.${format === 'xlsx' ? 'xlsx' : 'csv'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      showToastMessage('टेम्पलेट डाउनलोड होत आहे', 'success');
+    } catch (error: any) {
+      // If API fails (404 or any other error), use local template generation
+      console.log('API template download failed, using local generation:', error.message);
+      generateLocalTemplate(format);
+    }
+  };
+
   // Local template generation function
   const generateLocalTemplate = (format: 'xlsx' | 'csv') => {
     // Template data with gram examples
@@ -246,32 +272,6 @@ const PrasadItemsPage: React.FC = () => {
     }
     
     showToastMessage('टेम्पलेट डाउनलोड होत आहे', 'success');
-  };
-
-  const downloadTemplate = async (format: 'xlsx' | 'csv') => {
-    try {
-      // Convert format to the type expected by the API (excel/csv)
-      const apiFormat: 'excel' | 'csv' = format === 'xlsx' ? 'excel' : 'csv';
-      
-      // Try to get template from API first
-      const blob = await api.getImportTemplate(apiFormat);
-      
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `prasad_items_template.${format === 'xlsx' ? 'xlsx' : 'csv'}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      showToastMessage('टेम्पलेट डाउनलोड होत आहे', 'success');
-    } catch (error: any) {
-      // If API fails (404 or any other error), use local template generation
-      console.log('API template download failed, using local generation:', error.message);
-      generateLocalTemplate(format);
-    }
   };
 
   const getRemaining = (item: PrasadItem) => {

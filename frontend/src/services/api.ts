@@ -553,38 +553,3 @@ const apiService = new ApiService();
 
 // Export the instance as default
 export default apiService;
-
-// Also export individual methods for convenience
-export const {
-  login,
-  getCurrentUser,
-  getItems,
-  createItem,
-  updateItem,
-  deleteItem,
-  getItemStats,
-  bulkCreateItems,
-  bulkUpdateItems,
-  bulkDeleteItems,
-  exportItems,
-  importItems,
-  validateItems,
-  getImportTemplate,
-  getDonations,
-  createDonation,
-  deleteDonation,
-  getDonationStats,
-  getAdmins,
-  getCurrentAdmin,
-  createAdmin,
-  updateAdmin,
-  deleteAdmin,
-  toggleAdminStatus,
-  changePassword,
-  getServices,
-  createService,
-  updateService,
-  deleteService,
-  getPublicItems,
-  createPublicDonation
-} = apiService;
