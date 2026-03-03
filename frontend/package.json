@@ -9,7 +9,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "axios": "^1.13.5",
-    "html2pdf.js": "^0.9.3",
+    "html2pdf.js": "^0.14.0",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
     "pdfmake": "^0.3.5",
