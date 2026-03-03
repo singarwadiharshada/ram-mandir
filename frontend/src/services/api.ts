@@ -218,156 +218,155 @@ class ApiService {
   }
 
   // Import/Export
-// Import/Export
-async exportItems(params?: {
-  category?: string;
-  format?: 'excel' | 'csv';
-}): Promise<Blob> {
-  try {
-    return await this.api.get('/items/export', { 
-      params,
-      responseType: 'blob' 
-    });
-  } catch (error) {
-    console.error('Failed to export items:', error);
-    throw error;
+  async exportItems(params?: {
+    category?: string;
+    format?: 'excel' | 'csv';
+  }): Promise<Blob> {
+    try {
+      return await this.api.get('/items/export', { 
+        params,
+        responseType: 'blob' 
+      });
+    } catch (error) {
+      console.error('Failed to export items:', error);
+      throw error;
+    }
   }
-}
 
-async importItems(file: File): Promise<{
-  success: boolean;
-  imported: number;
-  failed: number;
-  errors?: string[];
-  message?: string;
-}> {
-  try {
-    // Validate file before sending
-    if (!file) {
-      throw new Error('No file provided');
-    }
-
-    // Check file extension
-    const fileExt = file.name.split('.').pop()?.toLowerCase();
-    const validExts = ['xlsx', 'xls', 'csv'];
-    
-    if (!validExts.includes(fileExt || '')) {
-      throw new Error(`अवैध फाइल प्रकार: .${fileExt}. कृपया .xlsx, .xls किंवा .csv फाइल निवडा.`);
-    }
-
-    // Check file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      throw new Error(`फाइल खूप मोठी आहे: ${(file.size / 1024 / 1024).toFixed(2)}MB. कमाल आकार 10MB आहे.`);
-    }
-
-    console.log('📤 Uploading file:', {
-      name: file.name,
-      type: file.type,
-      size: `${(file.size / 1024).toFixed(2)} KB`,
-      extension: fileExt
-    });
-
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    // Log FormData contents
-    console.log('📦 FormData entries:');
-    for (let pair of (formData as any).entries()) {
-      if (pair[1] instanceof File) {
-        console.log(`   ${pair[0]}: File - ${pair[1].name} (${pair[1].type}, ${pair[1].size} bytes)`);
-      } else {
-        console.log(`   ${pair[0]}: ${pair[1]}`);
+  async importItems(file: File): Promise<{
+    success: boolean;
+    imported: number;
+    failed: number;
+    errors?: string[];
+    message?: string;
+  }> {
+    try {
+      // Validate file before sending
+      if (!file) {
+        throw new Error('No file provided');
       }
-    }
-    
-    return await this.api.post('/items/import', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      timeout: 30000, // 30 second timeout for large files
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`📤 Upload progress: ${percentCompleted}%`);
+
+      // Check file extension
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      const validExts = ['xlsx', 'xls', 'csv'];
+      
+      if (!validExts.includes(fileExt || '')) {
+        throw new Error(`अवैध फाइल प्रकार: .${fileExt}. कृपया .xlsx, .xls किंवा .csv फाइल निवडा.`);
+      }
+
+      // Check file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        throw new Error(`फाइल खूप मोठी आहे: ${(file.size / 1024 / 1024).toFixed(2)}MB. कमाल आकार 10MB आहे.`);
+      }
+
+      console.log('📤 Uploading file:', {
+        name: file.name,
+        type: file.type,
+        size: `${(file.size / 1024).toFixed(2)} KB`,
+        extension: fileExt
+      });
+
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Log FormData contents
+      console.log('📦 FormData entries:');
+      for (let pair of (formData as any).entries()) {
+        if (pair[1] instanceof File) {
+          console.log(`   ${pair[0]}: File - ${pair[1].name} (${pair[1].type}, ${pair[1].size} bytes)`);
+        } else {
+          console.log(`   ${pair[0]}: ${pair[1]}`);
         }
       }
-    });
-  } catch (error: any) {
-    console.error('❌ Import failed:', error);
-    
-    // Provide more user-friendly error messages
-    if (error.code === 'ECONNABORTED') {
-      throw new Error('अपलोड टाइमआउट. कृपया लहान फाइल वापरून प्रयत्न करा.');
+      
+      return await this.api.post('/items/import', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 30000, // 30 second timeout for large files
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            console.log(`📤 Upload progress: ${percentCompleted}%`);
+          }
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ Import failed:', error);
+      
+      // Provide more user-friendly error messages
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('अपलोड टाइमआउट. कृपया लहान फाइल वापरून प्रयत्न करा.');
+      }
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+        
+        if (error.response.status === 404) {
+          throw new Error('इम्पोर्ट API उपलब्ध नाही. कृपया थेट फॉर्म वापरून वस्तू जोडा.');
+        }
+        
+        if (error.response.status === 413) {
+          throw new Error('फाइल खूप मोठी आहे. कृपया लहान फाइल वापरून प्रयत्न करा.');
+        }
+        
+        if (error.response.data?.message) {
+          throw new Error(error.response.data.message);
+        }
+        
+        if (error.response.data?.error) {
+          throw new Error(error.response.data.error);
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error('No response received:', error.request);
+        throw new Error('सर्व्हरकडून प्रतिसाद मिळाला नाही. कृपया नेटवर्क तपासा.');
+      }
+      
+      // Use the error message from the enhanced error object
+      if (error.data?.message) {
+        throw new Error(error.data.message);
+      }
+      
+      throw new Error(error.message || 'अपलोड करताना त्रुटी आली');
     }
-    
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      console.error('Response data:', error.response.data);
-      console.error('Response status:', error.response.status);
-      
-      if (error.response.status === 404) {
-        throw new Error('इम्पोर्ट API उपलब्ध नाही. कृपया थेट फॉर्म वापरून वस्तू जोडा.');
-      }
-      
-      if (error.response.status === 413) {
-        throw new Error('फाइल खूप मोठी आहे. कृपया लहान फाइल वापरून प्रयत्न करा.');
-      }
-      
-      if (error.response.data?.message) {
-        throw new Error(error.response.data.message);
-      }
-      
-      if (error.response.data?.error) {
-        throw new Error(error.response.data.error);
-      }
-    } else if (error.request) {
-      // The request was made but no response was received
-      console.error('No response received:', error.request);
-      throw new Error('सर्व्हरकडून प्रतिसाद मिळाला नाही. कृपया नेटवर्क तपासा.');
-    }
-    
-    // Use the error message from the enhanced error object
-    if (error.data?.message) {
-      throw new Error(error.data.message);
-    }
-    
-    throw new Error(error.message || 'अपलोड करताना त्रुटी आली');
   }
-}
 
-async validateItems(file: File): Promise<{
-  valid: boolean;
-  items: Partial<PrasadItem>[];
-  errors?: string[];
-}> {
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    return await this.api.post('/items/validate', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  } catch (error) {
-    console.error('Failed to validate items:', error);
-    throw error;
+  async validateItems(file: File): Promise<{
+    valid: boolean;
+    items: Partial<PrasadItem>[];
+    errors?: string[];
+  }> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      return await this.api.post('/items/validate', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    } catch (error) {
+      console.error('Failed to validate items:', error);
+      throw error;
+    }
   }
-}
 
-async getImportTemplate(format: 'excel' | 'csv' = 'excel'): Promise<Blob> {
-  try {
-    return await this.api.get('/items/template', {
-      params: { format },
-      responseType: 'blob'
-    });
-  } catch (error) {
-    console.error('Failed to get import template:', error);
-    throw error;
+  async getImportTemplate(format: 'excel' | 'csv' = 'excel'): Promise<Blob> {
+    try {
+      return await this.api.get('/items/template', {
+        params: { format },
+        responseType: 'blob'
+      });
+    } catch (error) {
+      console.error('Failed to get import template:', error);
+      throw error;
+    }
   }
-}
 
   // Donation APIs
   async getDonations(params?: { 
@@ -549,5 +548,43 @@ async getImportTemplate(format: 'excel' | 'csv' = 'excel'): Promise<Blob> {
   }
 }
 
+// Create a single instance
+const apiService = new ApiService();
 
-export default new ApiService();
+// Export the instance as default
+export default apiService;
+
+// Also export individual methods for convenience
+export const {
+  login,
+  getCurrentUser,
+  getItems,
+  createItem,
+  updateItem,
+  deleteItem,
+  getItemStats,
+  bulkCreateItems,
+  bulkUpdateItems,
+  bulkDeleteItems,
+  exportItems,
+  importItems,
+  validateItems,
+  getImportTemplate,
+  getDonations,
+  createDonation,
+  deleteDonation,
+  getDonationStats,
+  getAdmins,
+  getCurrentAdmin,
+  createAdmin,
+  updateAdmin,
+  deleteAdmin,
+  toggleAdminStatus,
+  changePassword,
+  getServices,
+  createService,
+  updateService,
+  deleteService,
+  getPublicItems,
+  createPublicDonation
+} = apiService;
