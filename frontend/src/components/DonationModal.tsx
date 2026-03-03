@@ -110,10 +110,6 @@ const DonationModal: React.FC<DonationModalProps> = ({ onClose, onSuccess, showT
     return (item.required - item.received).toFixed(3);
   };
 
-  // const isAvailable = (item: PrasadItem) => {
-  //   return (item.required - item.received) > 0;
-  // };
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
