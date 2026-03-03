@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as XLSX from 'xlsx';
 import api from '../services/api';
-import { PrasadItem, ItemStats } from '../types';
+import { PrasadItem, ItemStats, ServiceCategory, UnitType } from '../types';
 import ItemModal from '../components/ItemModal';
 import Toast from '../components/Toast';
 import './PrasadItemsPage.css';
@@ -15,6 +16,9 @@ const PrasadItemsPage: React.FC = () => {
     message: '', 
     type: 'success' 
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
 
@@ -28,6 +32,45 @@ const PrasadItemsPage: React.FC = () => {
   const { data: stats } = useQuery<ItemStats>({
     queryKey: ['itemStats'],
     queryFn: () => api.getItemStats()
+  });
+
+  // Bulk upload mutation with better error handling
+  const bulkUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      try {
+        return await api.importItems(file);
+      } catch (error: any) {
+        // If 404, provide a helpful message
+        if (error.status === 404) {
+          throw new Error('इम्पोर्ट API उपलब्ध नाही. कृपया थेट फॉर्म वापरून वस्तू जोडा.');
+        }
+        throw error;
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      queryClient.invalidateQueries({ queryKey: ['itemStats'] });
+      
+      if (data.failed > 0) {
+        showToastMessage(
+          `${data.imported} वस्तू यशस्वी, ${data.failed} वस्तू अयशस्वी`,
+          'error'
+        );
+      } else {
+        showToastMessage(`${data.imported} वस्तू यशस्वीरित्या अपलोड झाल्या`, 'success');
+      }
+      
+      setSelectedFile(null);
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    onError: (error: any) => {
+      const errorMsg = error.response?.data?.message || error.message || 'अपलोड करताना त्रुटी आली';
+      showToastMessage(errorMsg, 'error');
+      setUploading(false);
+    }
   });
 
   // Delete mutation
@@ -62,6 +105,303 @@ const PrasadItemsPage: React.FC = () => {
   const handleModalClose = () => {
     setShowModal(false);
     setEditingItem(null);
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check file type
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      if (!['xlsx', 'xls', 'csv'].includes(fileExt || '')) {
+        showToastMessage('कृपया .xlsx, .xls किंवा .csv फाइल निवडा', 'error');
+        event.target.value = '';
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      showToastMessage('कृपया फाइल निवडा', 'error');
+      return;
+    }
+
+    setUploading(true);
+    bulkUploadMutation.mutate(selectedFile);
+  };
+
+  // Parse Excel/CSV file locally as fallback
+  const parseLocalFile = async (file: File): Promise<Partial<PrasadItem>[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          let items: Partial<PrasadItem>[] = [];
+          
+          if (file.name.endsWith('.csv')) {
+            // Parse CSV
+            const text = data as string;
+            const lines = text.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            
+            // Map headers to expected fields
+            const nameIndex = headers.findIndex(h => h.includes('नाव') || h.includes('name'));
+            const categoryIndex = headers.findIndex(h => h.includes('श्रेणी') || h.includes('category'));
+            const unitIndex = headers.findIndex(h => h.includes('एकक') || h.includes('unit'));
+            const requiredIndex = headers.findIndex(h => h.includes('आवश्यक') || h.includes('required'));
+            
+            for (let i = 1; i < lines.length; i++) {
+              if (!lines[i].trim()) continue;
+              
+              const values = lines[i].split(',').map(v => v.trim());
+              if (values.length >= 4) {
+                // Map category to valid ServiceCategory type
+                const categoryStr = values[categoryIndex] || '';
+                let category: ServiceCategory = 'इतर'; // Default
+                if (categoryStr.includes('महाप्रसाद') || categoryStr.toLowerCase().includes('mahaprasad')) {
+                  category = 'महाप्रसाद';
+                } else if (categoryStr.includes('अभिषेक') || categoryStr.toLowerCase().includes('abhishek')) {
+                  category = 'अभिषेक';
+                }
+                
+                // Map unit to valid UnitType - FIXED: 'g' is not a valid UnitType, map to 'kg' instead
+                const unitStr = values[unitIndex]?.toLowerCase() || 'kg';
+                let unit: UnitType = 'kg'; // Default
+                if (unitStr.includes('kg') || unitStr.includes('किलो')) {
+                  unit = 'kg';
+                } else if (unitStr.includes('g') || unitStr.includes('ग्रॅम')) {
+                  // Convert grams to kg (assuming 1000g = 1kg) or just use kg
+                  unit = 'kg';
+                } else if (unitStr.includes('liter') || unitStr.includes('l') || unitStr.includes('लीटर')) {
+                  unit = 'liter';
+                } else if (unitStr.includes('piece') || unitStr.includes('पीस') || unitStr.includes('pcs')) {
+                  unit = 'piece';
+                }
+                
+                // Parse required quantity and convert if needed
+                let required = parseFloat(values[requiredIndex]) || 0;
+                
+                // If unit was grams, convert to kg
+                if (unitStr.includes('g') && !unitStr.includes('kg')) {
+                  required = required / 1000; // Convert grams to kg
+                }
+                
+                items.push({
+                  name: values[nameIndex] || '',
+                  category: category,
+                  unit: unit,
+                  required: required,
+                  received: 0
+                });
+              }
+            }
+          } else {
+            // Parse Excel
+            const workbook = XLSX.read(data, { type: 'binary' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 });
+            
+            const headers = jsonData[0] as string[];
+            
+            // Map headers to expected fields
+            const nameIndex = headers.findIndex(h => 
+              h.includes('नाव') || h.includes('name') || h.includes('Item')
+            );
+            const categoryIndex = headers.findIndex(h => 
+              h.includes('श्रेणी') || h.includes('category') || h.includes('Category')
+            );
+            const unitIndex = headers.findIndex(h => 
+              h.includes('एकक') || h.includes('unit') || h.includes('Unit')
+            );
+            const requiredIndex = headers.findIndex(h => 
+              h.includes('आवश्यक') || h.includes('required') || h.includes('Required')
+            );
+            
+            for (let i = 1; i < jsonData.length; i++) {
+              const row = jsonData[i] as any[];
+              if (!row || row.length < 4) continue;
+              
+              // Map category to valid ServiceCategory type
+              const categoryStr = row[categoryIndex]?.toString() || '';
+              let category: ServiceCategory = 'इतर'; // Default
+              if (categoryStr.includes('महाप्रसाद') || categoryStr.toLowerCase().includes('mahaprasad')) {
+                category = 'महाप्रसाद';
+              } else if (categoryStr.includes('अभिषेक') || categoryStr.toLowerCase().includes('abhishek')) {
+                category = 'अभिषेक';
+              }
+              
+              // Map unit to valid UnitType - FIXED: 'g' is not a valid UnitType, map to 'kg' instead
+              const unitStr = row[unitIndex]?.toString().toLowerCase() || 'kg';
+              let unit: UnitType = 'kg'; // Default
+              if (unitStr.includes('kg') || unitStr.includes('किलो')) {
+                unit = 'kg';
+              } else if (unitStr.includes('g') || unitStr.includes('ग्रॅम')) {
+                // Convert grams to kg (assuming 1000g = 1kg) or just use kg
+                unit = 'kg';
+              } else if (unitStr.includes('liter') || unitStr.includes('l') || unitStr.includes('लीटर')) {
+                unit = 'liter';
+              } else if (unitStr.includes('piece') || unitStr.includes('पीस') || unitStr.includes('pcs')) {
+                unit = 'piece';
+              }
+              
+              // Parse required quantity and convert if needed
+              let required = parseFloat(row[requiredIndex]) || 0;
+              
+              // If unit was grams, convert to kg
+              if (unitStr.includes('g') && !unitStr.includes('kg')) {
+                required = required / 1000; // Convert grams to kg
+              }
+              
+              items.push({
+                name: row[nameIndex]?.toString() || '',
+                category: category,
+                unit: unit,
+                required: required,
+                received: 0
+              });
+            }
+          }
+          
+          resolve(items);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      if (file.name.endsWith('.csv')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsBinaryString(file);
+      }
+    });
+  };
+
+  // Local upload fallback
+  const uploadLocally = async (items: Partial<PrasadItem>[]) => {
+    try {
+      // Filter out invalid items
+      const validItems = items.filter(item => 
+        item.name && item.category && item.unit && item.required && item.required > 0
+      );
+      
+      if (validItems.length === 0) {
+        throw new Error('वैध वस्तू आढळल्या नाहीत');
+      }
+      
+      // Create items one by one as fallback
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (const item of validItems) {
+        try {
+          await api.createItem(item as Omit<PrasadItem, '_id' | 'createdAt' | 'updatedAt' | 'received'>);
+          successCount++;
+        } catch (err) {
+          failCount++;
+        }
+      }
+      
+      return {
+        imported: successCount,
+        failed: failCount,
+        message: `${successCount} वस्तू यशस्वी, ${failCount} वस्तू अयशस्वी`
+      };
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // Local template generation function
+  const generateLocalTemplate = (format: 'xlsx' | 'csv') => {
+    // Template data - FIXED: Removed 'g' as it's not a valid UnitType
+    const templateData = [
+      ['वस्तूचे नाव', 'श्रेणी', 'एकक', 'आवश्यक प्रमाण'],
+      ['तांदूळ', 'महाप्रसाद', 'kg', '100'],
+      ['साखर', 'महाप्रसाद', 'kg', '50'],
+      ['दूध', 'अभिषेक', 'liter', '20'],
+      ['फळे', 'इतर', 'kg', '30'],
+      ['नारळ', 'इतर', 'piece', '10']
+    ];
+
+    if (format === 'xlsx') {
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(templateData);
+      
+      // Add column widths
+      ws['!cols'] = [
+        { wch: 20 }, // वस्तूचे नाव
+        { wch: 15 }, // श्रेणी
+        { wch: 10 }, // एकक
+        { wch: 15 }  // आवश्यक प्रमाण
+      ];
+      
+      XLSX.utils.book_append_sheet(wb, ws, 'Template');
+      XLSX.writeFile(wb, 'prasad_items_template.xlsx');
+    } else {
+      // Create CSV with BOM for UTF-8
+      const csvContent = templateData.map(row => row.join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'prasad_items_template.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    }
+    
+    showToastMessage('टेम्पलेट डाउनलोड होत आहे', 'success');
+  };
+
+  const downloadTemplate = async (format: 'xlsx' | 'csv') => {
+    try {
+      // Convert format to the type expected by the API (excel/csv)
+      const apiFormat: 'excel' | 'csv' = format === 'xlsx' ? 'excel' : 'csv';
+      
+      // Try to get template from API first
+      const blob = await api.getImportTemplate(apiFormat);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `prasad_items_template.${format === 'xlsx' ? 'xlsx' : 'csv'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      showToastMessage('टेम्पलेट डाउनलोड होत आहे', 'success');
+    } catch (error: any) {
+      // If API fails (404 or any other error), use local template generation
+      console.log('API template download failed, using local generation:', error.message);
+      generateLocalTemplate(format);
+    }
+  };
+
+  const mapCategory = (category: string): ServiceCategory => {
+    if (category.includes('महाप्रसाद') || category.toLowerCase().includes('mahaprasad')) {
+      return 'महाप्रसाद';
+    } else if (category.includes('अभिषेक') || category.toLowerCase().includes('abhishek')) {
+      return 'अभिषेक';
+    } else {
+      return 'इतर';
+    }
+  };
+
+  const mapUnit = (unit: string): UnitType => {
+    const unitLower = unit.toLowerCase();
+    if (unitLower.includes('liter') || unitLower.includes('l') || unitLower.includes('लीटर')) {
+      return 'liter';
+    } else if (unitLower.includes('piece') || unitLower.includes('पीस') || unitLower.includes('pcs')) {
+      return 'piece';
+    } else {
+      return 'kg'; // Default to kg for anything else including grams
+    }
   };
 
   const getRemaining = (item: PrasadItem) => {
@@ -186,12 +526,14 @@ const PrasadItemsPage: React.FC = () => {
                         <button 
                           className="btn-icon edit"
                           onClick={() => handleEdit(item)}
+                          title="संपादित करा"
                         >
                           ✎
                         </button>
                         <button 
                           className="btn-icon delete"
                           onClick={() => handleDelete(item._id)}
+                          title="काढा"
                         >
                           🗑
                         </button>
@@ -207,19 +549,57 @@ const PrasadItemsPage: React.FC = () => {
 
       {/* Import Section */}
       <div className="import-section">
-        <h3>Import Instructions:</h3>
-        <p>Required columns: Item Name, Category, Required Quantity (kg). Quantity must be in kg (decimal allowed, e.g., 5.500). Accepted categories: महाप्रसाद / mahaprasad, अभिषेक / abhishek, इतर / other.</p>
+        <h3>📤 मोठ्या प्रमाणात वस्तू अपलोड करा</h3>
+        <p className="import-instructions">
+          <strong>सूचना:</strong> खालील स्तंभ आवश्यक आहेत: 
+          <code>वस्तूचे नाव, श्रेणी, एकक, आवश्यक प्रमाण</code>
+          <br />
+          <strong>श्रेणी:</strong> महाप्रसाद / mahaprasad, अभिषेक / abhishek, इतर / other
+          <br />
+          <strong>एकक:</strong> kg, liter, piece (फक्त हीच एकके स्वीकार्य आहेत)
+          <br />
+          <strong>प्रमाण:</strong> दशांश मूल्ये स्वीकार्य (उदा. 5.500, 10.250)
+        </p>
         
         <div className="file-upload">
-          <input type="file" id="file" accept=".xlsx,.csv" />
-          <label htmlFor="file" className="btn-secondary">Choose file</label>
-          <span className="file-name">No file chosen</span>
-          <button className="btn-success">Upload File</button>
+          <input 
+            type="file" 
+            id="file" 
+            accept=".xlsx,.xls,.csv"
+            onChange={handleFileChange}
+            ref={fileInputRef}
+            disabled={uploading}
+          />
+          <label htmlFor="file" className="btn-secondary">
+            📂 फाइल निवडा
+          </label>
+          <span className="file-name">
+            {selectedFile ? selectedFile.name : 'कोणतीही फाइल निवडली नाही'}
+          </span>
+          <button 
+            className="btn-success" 
+            onClick={handleUpload}
+            disabled={!selectedFile || uploading}
+          >
+            {uploading ? '⏳ अपलोड होत आहे...' : '📤 फाइल अपलोड करा'}
+          </button>
         </div>
 
         <div className="template-links">
-          <a href="#" className="template-link">📥 Download Excel template (.xlsx)</a>
-          <a href="#" className="template-link">📥 Download CSV template (.csv)</a>
+          <button 
+            className="template-link" 
+            onClick={() => downloadTemplate('xlsx')}
+            disabled={uploading}
+          >
+            📥 Excel टेम्पलेट डाउनलोड करा (.xlsx)
+          </button>
+          <button 
+            className="template-link" 
+            onClick={() => downloadTemplate('csv')}
+            disabled={uploading}
+          >
+            📥 CSV टेम्पलेट डाउनलोड करा (.csv)
+          </button>
         </div>
       </div>
 

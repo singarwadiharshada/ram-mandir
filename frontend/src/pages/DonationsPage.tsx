@@ -4,12 +4,18 @@ import api from '../services/api';
 import { Donation, DonationStats } from '../types';
 import DonationModal from '../components/DonationModal';
 import Toast from '../components/Toast';
+import { generateDonationsPDF, generateSimpleDonationsPDF } from '../utils/html2pdfGenerator';
 import './DonationsPage.css';
 
 const DonationsPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
+  const [showPDFOptions, setShowPDFOptions] = useState(false);
   const [filters, setFilters] = useState({ category: 'all', search: '' });
-  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ 
+    show: false, 
+    message: '', 
+    type: 'success' 
+  });
   
   const queryClient = useQueryClient();
 
@@ -50,6 +56,36 @@ const DonationsPage: React.FC = () => {
     }
   };
 
+const handlePDFDownload = () => {
+  if (donations.length === 0) {
+    showToastMessage('PDF डाउनलोड करण्यासाठी कोणतीही देणगी नाही', 'error');
+    return;
+  }
+
+  try {
+    generateDonationsPDF({ donations, stats, filters });
+    showToastMessage('PDF यशस्वीरित्या डाउनलोड होत आहे', 'success');
+  } catch (error) {
+    showToastMessage('PDF डाउनलोड करताना त्रुटी', 'error');
+    console.error('PDF generation error:', error);
+  }
+};
+
+const handleSimplePDFDownload = () => {
+  if (donations.length === 0) {
+    showToastMessage('PDF डाउनलोड करण्यासाठी कोणतीही देणगी नाही', 'error');
+    return;
+  }
+
+  try {
+    generateSimpleDonationsPDF(donations, 'देणगी यादी');
+    showToastMessage('PDF यशस्वीरित्या डाउनलोड होत आहे', 'success');
+  } catch (error) {
+    showToastMessage('PDF डाउनलोड करताना त्रुटी', 'error');
+    console.error('PDF generation error:', error);
+  }
+};
+
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('mr-IN', {
       day: 'numeric',
@@ -62,9 +98,24 @@ const DonationsPage: React.FC = () => {
     <div className="donations-page">
       <div className="page-header">
         <h2>देणग्या व्यवस्थापन <span>सर्व देणग्या पहा आणि व्यवस्थापित करा</span></h2>
-        <button className="btn-secondary" onClick={() => alert('PDF डाउनलोड')}>
-          📄 PDF डाउनलोड करा
-        </button>
+        <div className="pdf-dropdown">
+          <button 
+            className="btn-secondary" 
+            onClick={() => setShowPDFOptions(!showPDFOptions)}
+          >
+            📄 PDF डाउनलोड करा ▼
+          </button>
+          {showPDFOptions && (
+            <div className="pdf-dropdown-menu">
+              <button onClick={handlePDFDownload}>
+                संपूर्ण अहवाल (सारांश सह)
+              </button>
+              <button onClick={handleSimplePDFDownload}>
+                फक्त यादी (सोपी)
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}

@@ -4,6 +4,7 @@ import './DonationSuccess.css';
 const DonationSuccess: React.FC = () => {
   return (
     <div className="success-container">
+      <div className="overlay"></div> {/* Add this overlay div */}
       <div className="success-card">
         <div className="success-icon">✅</div>
         <h1>देणगी यशस्वी!</h1>

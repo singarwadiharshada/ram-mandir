@@ -16,7 +16,7 @@ class ApiService {
 
     this.api.interceptors.request.use(this.handleRequest.bind(this));
     this.api.interceptors.response.use(
-      this.handleResponse.bind(this),  // Changed from response => response.data
+      this.handleResponse.bind(this),
       this.handleError.bind(this)
     );
   }
@@ -36,7 +36,7 @@ class ApiService {
       status: response.status,
       data: response.data
     });
-    return response.data; // Still return just the data for successful responses
+    return response.data;
   }
 
   private handleError(error: AxiosError) {
@@ -56,7 +56,6 @@ class ApiService {
       window.location.href = '/login';
     }
     
-    // Return the full error object with response data
     return Promise.reject({
       message: error.message,
       code: error.code,
@@ -79,7 +78,7 @@ class ApiService {
     return this.api.get('/auth/me');
   }
 
-  // Item APIs - UPDATED with pagination support
+  // Item APIs
   async getItems(params?: { 
     category?: string; 
     search?: string;
@@ -105,7 +104,81 @@ class ApiService {
     return this.api.get('/items/stats/summary');
   }
 
-  // Donation APIs - UPDATED with pagination support
+  // Bulk operations - NEW METHODS
+  async bulkCreateItems(items: Partial<PrasadItem>[]): Promise<{ 
+    success: boolean; 
+    count: number; 
+    items: PrasadItem[] 
+  }> {
+    return this.api.post('/items/bulk', items);
+  }
+
+  async bulkUpdateItems(items: { id: string; data: Partial<PrasadItem> }[]): Promise<{
+    success: boolean;
+    count: number;
+    items: PrasadItem[];
+  }> {
+    return this.api.put('/items/bulk', items);
+  }
+
+  async bulkDeleteItems(ids: string[]): Promise<{
+    success: boolean;
+    count: number;
+    message: string;
+  }> {
+    return this.api.delete('/items/bulk', { data: { ids } });
+  }
+
+  // Import/Export - NEW METHODS
+  async exportItems(params?: {
+    category?: string;
+    format?: 'excel' | 'csv';
+  }): Promise<Blob> {
+    return this.api.get('/items/export', { 
+      params,
+      responseType: 'blob' 
+    });
+  }
+
+  async importItems(file: File): Promise<{
+    success: boolean;
+    imported: number;
+    failed: number;
+    errors?: string[];
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return this.api.post('/items/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
+
+  async validateItems(file: File): Promise<{
+    valid: boolean;
+    items: Partial<PrasadItem>[];
+    errors?: string[];
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return this.api.post('/items/validate', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
+
+  async getImportTemplate(format: 'excel' | 'csv' = 'excel'): Promise<Blob> {
+    return this.api.get('/items/template', {
+      params: { format },
+      responseType: 'blob'
+    });
+  }
+
+  // Donation APIs
   async getDonations(params?: { 
     category?: string; 
     search?: string;
@@ -161,7 +234,7 @@ class ApiService {
     return this.api.put('/auth/change-password', data);
   }
 
-  // Service APIs - UPDATED with pagination support
+  // Service APIs
   async getServices(params?: { 
     category?: string; 
     search?: string;
@@ -183,7 +256,7 @@ class ApiService {
     return this.api.delete(`/services/${id}`);
   }
   
-  // Public endpoints - UPDATED with pagination support
+  // Public endpoints
   async getPublicItems(params?: { 
     category?: string; 
     search?: string;

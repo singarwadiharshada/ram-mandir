@@ -107,93 +107,92 @@ const DonationForm: React.FC = () => {
   };
 
   // Create donation mutation with improved error handling
-// Create donation mutation with improved error handling
-const createMutation = useMutation({
-  mutationFn: (data: typeof formData) => {
-    console.log('Submitting donation with data:', JSON.stringify(data, null, 2));
-    
-    // Find the selected item to get its details
-    const selectedItemObj = items.find(i => i._id === data.item);
-    
-    // Base object with required fields for all services
-    const donationData: any = {
-      donorName: data.donorName,
-      mobile: data.mobile,
-      service: data.service,
-      address: data.address || '',
-    };
-    
-    // Add service-specific fields based on the updated schema
-    if (data.service === 'महाप्रसाद') {
-      // For Mahaprasad: send item, quantity, unit, but NO amount
-      donationData.item = data.item;
-      donationData.itemName = selectedItemObj?.name || '';
-      donationData.quantity = data.quantity;
-      donationData.unit = selectedItemObj?.unit || 'kg';
+  const createMutation = useMutation({
+    mutationFn: (data: typeof formData) => {
+      console.log('Submitting donation with data:', JSON.stringify(data, null, 2));
       
-      // IMPORTANT: Explicitly remove amount field if it exists
-      delete donationData.amount;
-    } else {
-      // For Abhishek/Other: send amount, but NO item/quantity/unit
-      donationData.amount = parseInt(data.amount) || 0;
+      // Find the selected item to get its details
+      const selectedItemObj = items.find(i => i._id === data.item);
       
-      // IMPORTANT: Explicitly remove item-related fields if they exist
-      delete donationData.item;
-      delete donationData.itemName;
-      delete donationData.quantity;
-      delete donationData.unit;
+      // Base object with required fields for all services
+      const donationData: any = {
+        donorName: data.donorName,
+        mobile: data.mobile,
+        service: data.service,
+        address: data.address || '',
+      };
+      
+      // Add service-specific fields based on the updated schema
+      if (data.service === 'महाप्रसाद') {
+        // For Mahaprasad: send item, quantity, unit, but NO amount
+        donationData.item = data.item;
+        donationData.itemName = selectedItemObj?.name || '';
+        donationData.quantity = data.quantity;
+        donationData.unit = selectedItemObj?.unit || 'kg';
+        
+        // IMPORTANT: Explicitly remove amount field if it exists
+        delete donationData.amount;
+      } else {
+        // For Abhishek/Other: send amount, but NO item/quantity/unit
+        donationData.amount = parseInt(data.amount) || 0;
+        
+        // IMPORTANT: Explicitly remove item-related fields if they exist
+        delete donationData.item;
+        delete donationData.itemName;
+        delete donationData.quantity;
+        delete donationData.unit;
+      }
+      
+      console.log('Processed donation data being sent:', JSON.stringify(donationData, null, 2));
+      
+      // Validation check
+      if (data.service === 'महाप्रसाद') {
+        console.log('Checking Mahaprasad donation - amount should be undefined:', donationData.amount);
+      } else {
+        console.log('Checking Abhishek/Other donation - amount should be number:', donationData.amount);
+      }
+      
+      return api.createPublicDonation(donationData);
+    },
+    onSuccess: (response) => {
+      console.log('Donation successful:', response);
+      playSuccessAudio();
+      
+      showToast('देणगी यशस्वीरित्या नोंदवली गेली! जय श्री राम! 🙏', 'success');
+      
+      setFormData({
+        donorName: '',
+        mobile: '',
+        service: 'महाप्रसाद',
+        item: '',
+        quantity: 1,
+        amount: '',
+        address: ''
+      });
+      setSelectedItem(null);
+      setCurrentPage(1);
+      
+      setTimeout(() => {
+        window.location.href = '/donation-success';
+      }, 2000);
+    },
+    onError: (error: any) => {
+      console.error('Full error object:', error);
+      console.error('Error response data:', error.response?.data);
+      
+      let errorMessage = 'काहीतरी चूक झाली. कृपया पुन्हा प्रयत्न करा.';
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.code === 'ERR_NETWORK') {
+        errorMessage = 'सर्व्हरशी संपर्क साधता आला नाही. कृपया नेटवर्क तपासा.';
+      }
+      
+      showToast(errorMessage, 'error');
     }
-    
-    console.log('Processed donation data being sent:', JSON.stringify(donationData, null, 2));
-    
-    // Validation check
-    if (data.service === 'महाप्रसाद') {
-      console.log('Checking Mahaprasad donation - amount should be undefined:', donationData.amount);
-    } else {
-      console.log('Checking Abhishek/Other donation - amount should be number:', donationData.amount);
-    }
-    
-    return api.createPublicDonation(donationData);
-  },
-  onSuccess: (response) => {
-    console.log('Donation successful:', response);
-    playSuccessAudio();
-    
-    showToast('देणगी यशस्वीरित्या नोंदवली गेली! जय श्री राम! 🙏', 'success');
-    
-    setFormData({
-      donorName: '',
-      mobile: '',
-      service: 'महाप्रसाद',
-      item: '',
-      quantity: 1,
-      amount: '',
-      address: ''
-    });
-    setSelectedItem(null);
-    setCurrentPage(1);
-    
-    setTimeout(() => {
-      window.location.href = '/donation-success';
-    }, 2000);
-  },
-  onError: (error: any) => {
-    console.error('Full error object:', error);
-    console.error('Error response data:', error.response?.data);
-    
-    let errorMessage = 'काहीतरी चूक झाली. कृपया पुन्हा प्रयत्न करा.';
-    
-    if (error.response?.data?.error) {
-      errorMessage = error.response.data.error;
-    } else if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    } else if (error.code === 'ERR_NETWORK') {
-      errorMessage = 'सर्व्हरशी संपर्क साधता आला नाही. कृपया नेटवर्क तपासा.';
-    }
-    
-    showToast(errorMessage, 'error');
-  }
-});
+  });
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
@@ -296,26 +295,44 @@ const createMutation = useMutation({
   };
 
   return (
-    <div className="donation-form-container">
-      {/* Temple Header with Login on Right */}
+    <div className="donation-form-container with-bg-image">
+      {/* Temple Header with Logo on Left and Login on Right */}
       <div className="temple-header">
+        <div className="header-logo">
+          <img 
+            src="favicon.ico" 
+            alt="श्री राम मंदिर लोगो" 
+            className="temple-logo"
+          />
+        </div>
+        
         <div className="header-content">
           <h1 className="main-title">श्री राम मंदिर, शाहूपुरी, कोल्हापूर</h1>
           <h2 className="festival-title">श्री राम जन्मोत्सव २०२६</h2>
-          <h3>१९ मार्च २०२६ ते २६ मार्च २०२६</h3>
-          <h4>श्री राम मंदिर, शाहूपुरी ४ थी गल्ली, कोल्हापूर</h4>
         </div>
         
         {/* Login Button on Right Side */}
         <div className="header-login">
           <a href="/login" className="login-btn">
-            <span className="login-icon">👤</span>
+            <span className="login-icon">लॉग इन</span>
           </a>
+        </div>
+      </div>
+
+      {/* Temple Information Container (Image removed, text preserved) */}
+      <div className="temple-info-container">
+        <div className="temple-info-text">
+          <div>स्थापना - 1922. रजि नं A-9</div>
+          <div>श्री राम मंदिर, शाहुपुरी 4 थी गल्ली, कोल्हापूर</div>
+          <div>श्री राम जन्मोत्सव व महाप्रसाद</div>
+          <div>19 मार्च 2026 ते 26 मार्च 2026</div>
+          <div>संपर्क - 8956747400, 9552297302, 9503959906, 8830149595</div>
         </div>
       </div>
 
       {/* Main Form */}
       <div className="form-wrapper">
+        <h3>महाप्रसाद 26 मार्च 2026 वेळ दु.12.00 ते 3.00</h3>
         <h3>देणगी नोंदणी फॉर्म</h3>
         <p className="form-subtitle">कृपया खालील माहिती भरा</p>
 
@@ -379,7 +396,7 @@ const createMutation = useMutation({
           {/* For Mahaprasad - Show Item Selection Dropdown */}
           {formData.service === 'महाप्रसाद' && (
             <div className="form-group">
-              <label>प्रसाद वस्तू निवडा *</label>
+              <label>वस्तू निवडा *</label>
               {isLoading ? (
                 <div className="loading">लोड करत आहे...</div>
               ) : error ? (
@@ -512,8 +529,8 @@ const createMutation = useMutation({
 
       {/* Footer */}
       <footer className="public-footer">
-        <p>श्री राम मंदिर, शाहूपुरी ४ थी गल्ली, कोल्हापूर | स्थापना - १९२२</p>
-        <p>📞 8956747400, 9552297302, 9503959906, 8830149595</p>
+        <p>*ऑनलाईन पेमेंटला पावती मिळणार नाही याची नोंद घ्यावी.</p>
+        <p>*मंदिरात येवून रोख रक्कम देवून पावती घ्यावी.</p>
       </footer>
 
       {toast.show && <Toast message={toast.message} type={toast.type} />}
