@@ -81,3 +81,44 @@
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(249,115,22,0.3);
 }
+.qr-image-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.qr-square-image {
+  width: 200px;
+  height: 200px;
+  object-fit: cover; /* This ensures the image fills the square without distortion */
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border: 2px solid #fff;
+}
+
+.qr-upi-id {
+  margin: 10px 0 5px;
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.qr-instruction {
+  margin: 0;
+  color: #666;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Responsive adjustment for mobile */
+@media (max-width: 480px) {
+  .qr-square-image {
+    width: 150px;
+    height: 150px;
+  }
+}

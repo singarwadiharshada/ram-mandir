@@ -1,5 +1,4 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import html2pdf from 'html2pdf.js';
 import { Donation, DonationStats } from '../types';
 
 interface PDFGenerationParams {
@@ -9,338 +8,226 @@ interface PDFGenerationParams {
   title?: string;
 }
 
-// Helper function to format dates in Marathi
-const formatMarathiDate = (date: Date | string) => {
-  const d = new Date(date);
-  return d.toLocaleDateString('mr-IN', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-};
-
 // Full report with stats - VERTICAL & BLACK & WHITE
 export const generateDonationsPDF = ({ donations, stats }: PDFGenerationParams) => {
-  // Create new PDF document
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  });
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 15; // 15mm margin on all sides
-  let currentY = margin;
-
-  // Helper function to add new page if needed
-  const checkPageBreak = (height: number) => {
-    if (currentY + height > pageHeight - margin) {
-      doc.addPage();
-      currentY = margin;
-      return true;
-    }
-    return false;
-  };
-
+  // Create a hidden div with OPTIMIZED width for portrait
+  const element = document.createElement('div');
+  element.style.width = '800px'; // Reduced width for portrait
+  element.style.padding = '20px';
+  element.style.fontFamily = "'Noto Sans Devanagari', sans-serif";
+  element.style.backgroundColor = 'white';
+  element.style.color = 'black';
+  element.style.fontSize = '12px'; // Slightly larger for portrait
+  
   // Header - Black and white only
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(24);
-  doc.setTextColor(0, 0, 0);
-  doc.text('श्री राम मंदिर', pageWidth / 2, currentY, { align: 'center' });
+  element.innerHTML = `
+    <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px;">
+      <h1 style="font-size: 24px; margin: 0; font-weight: bold; color: black;">श्री राम मंदिर</h1>
+      <h2 style="font-size: 20px; margin: 5px 0; font-weight: bold; color: black;">देणगी अहवाल</h2>
+      <p style="font-size: 12px; color: #333;">${new Date().toLocaleDateString('mr-IN', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      })}</p>
+    </div>
+  `;
   
-  currentY += 10;
-  doc.setFontSize(20);
-  doc.text('देणगी अहवाल', pageWidth / 2, currentY, { align: 'center' });
-  
-  currentY += 8;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
-  doc.setTextColor(51, 51, 51); // #333
-  doc.text(formatMarathiDate(new Date()), pageWidth / 2, currentY, { align: 'center' });
-  
-  currentY += 15;
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  doc.line(margin, currentY, pageWidth - margin, currentY);
-  currentY += 10;
-
   // Stats in a grid - Black and white only
   if (stats) {
-    const statWidth = (pageWidth - 2 * margin - 30) / 4; // 30mm total gap between boxes
-    
-    // Check if stats section needs a new page
-    checkPageBreak(45);
-
-    // Stat boxes
-    const stats_data = [
-      { label: 'एकूण देणग्या', value: stats.totalDonations.toString() },
-      { label: 'एकूण रक्कम', value: `₹${(stats.totalAmount || 0).toLocaleString()}` },
-      { label: 'आजच्या देणग्या', value: stats.todayDonations.toString() },
-      { label: 'सरासरी रक्कम', value: `₹${Math.round(stats.avgAmount || 0)}` }
-    ];
-
-    stats_data.forEach((stat, index) => {
-      const x = margin + (index * (statWidth + 10));
-      
-      // Box border
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.2);
-      doc.rect(x, currentY, statWidth, 35);
-      
-      // Label
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.text(stat.label, x + statWidth/2, currentY + 8, { align: 'center' });
-      
-      // Underline
-      doc.setDrawColor(204, 204, 204);
-      doc.line(x + 5, currentY + 12, x + statWidth - 5, currentY + 12);
-      
-      // Value
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.text(stat.value, x + statWidth/2, currentY + 25, { align: 'center' });
-    });
-    
-    currentY += 45;
+    element.innerHTML += `
+      <div style="display: flex; justify-content: space-between; margin-bottom: 25px; gap: 10px;">
+        <div style="flex: 1; border: 1px solid black; padding: 12px; text-align: center;">
+          <div style="font-size: 11px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 4px;">एकूण देणग्या</div>
+          <div style="font-size: 18px; font-weight: bold;">${stats.totalDonations}</div>
+        </div>
+        <div style="flex: 1; border: 1px solid black; padding: 12px; text-align: center;">
+          <div style="font-size: 11px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 4px;">एकूण रक्कम</div>
+          <div style="font-size: 18px; font-weight: bold;">₹${(stats.totalAmount || 0).toLocaleString()}</div>
+        </div>
+        <div style="flex: 1; border: 1px solid black; padding: 12px; text-align: center;">
+          <div style="font-size: 11px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 4px;">आजच्या देणग्या</div>
+          <div style="font-size: 18px; font-weight: bold;">${stats.todayDonations}</div>
+        </div>
+        <div style="flex: 1; border: 1px solid black; padding: 12px; text-align: center;">
+          <div style="font-size: 11px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 4px;">सरासरी रक्कम</div>
+          <div style="font-size: 18px; font-weight: bold;">₹${Math.round(stats.avgAmount || 0)}</div>
+        </div>
+      </div>
+    `;
   }
-
-  // Table title
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(0, 0, 0);
-  doc.text('देणगी तपशील', margin, currentY);
   
-  currentY += 8;
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  doc.line(margin, currentY, pageWidth - margin, currentY);
-  currentY += 8;
-
-  // Prepare table data
-  const tableBody = donations.map((d, index) => {
-    const formattedDate = d.date ? new Date(d.date).toLocaleDateString('mr-IN') : '-';
-    return [
-      d.donorName || '-',
-      d.service || '-',
-      d.itemName || '-',
-      `${d.quantity || 0} ${d.unit || ''}`.trim(),
-      `₹${d.amount || 0}`,
-      formattedDate,
-      d.mobile || '-',
-      '✕'
-    ];
-  });
-
-  // Generate table
-  autoTable(doc, {
-    head: [['देणगीदार', 'सेवा', 'वस्तू', 'प्रमाण', 'रक्कम', 'दिनांक', 'मोबाईल', 'क्रिया']],
-    body: tableBody,
-    startY: currentY,
-    theme: 'grid',
-    styles: {
-      fontSize: 9,
-      cellPadding: 2,
-      lineColor: [0, 0, 0],
-      lineWidth: 0.1,
-      textColor: [0, 0, 0],
-      font: 'helvetica',
-      halign: 'left'
-    },
-    headStyles: {
-      fillColor: [224, 224, 224], // #e0e0e0
-      textColor: [0, 0, 0],
-      fontStyle: 'bold',
-      halign: 'center',
-      lineColor: [0, 0, 0],
-      lineWidth: 0.2
-    },
-    columnStyles: {
-      0: { cellWidth: 35 }, // donor name
-      1: { cellWidth: 20 }, // service
-      2: { cellWidth: 30 }, // item
-      3: { cellWidth: 15, halign: 'center' }, // quantity
-      4: { cellWidth: 20, halign: 'right' }, // amount
-      5: { cellWidth: 25, halign: 'center' }, // date
-      6: { cellWidth: 25 }, // mobile
-      7: { cellWidth: 15, halign: 'center' } // action
-    },
-    alternateRowStyles: {
-      fillColor: [245, 245, 245] // #f5f5f5
-    },
-    margin: { left: margin, right: margin },
-    didDrawPage: (data) => {
-      // Add footer on each page
-      const pageCount = doc.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(
-          `पृष्ठ ${i} / ${pageCount}`,
-          pageWidth - margin,
-          pageHeight - 10,
-          { align: 'right' }
-        );
-      }
-    }
-  });
-
-  // Get the last Y position after the table
-  const finalY = (doc as any).lastAutoTable.finalY || currentY + 50;
-
-  // Calculate totals
+  // Table with OPTIMIZED column widths for portrait (total 800px)
+  element.innerHTML += `
+    <h3 style="font-size: 16px; margin: 20px 0 10px 0; font-weight: bold; border-bottom: 1px solid black; padding-bottom: 5px;">देणगी तपशील</h3>
+    <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+      <colgroup>
+        <col style="width: 140px"> <!-- देणगीदाराचे नाव -->
+        <col style="width: 70px">  <!-- सेवा -->
+        <col style="width: 100px"> <!-- वस्तू -->
+        <col style="width: 60px">  <!-- प्रमाण -->
+        <col style="width: 70px">  <!-- रक्कम -->
+        <col style="width: 80px">  <!-- दिनांक -->
+        <col style="width: 90px">  <!-- मोबाईल -->
+        <col style="width: 50px">  <!-- क्रिया -->
+      </colgroup>
+      <thead>
+        <tr style="background: #e0e0e0; border: 1px solid black;">
+          <th style="padding: 8px 4px; text-align: left; border: 1px solid black; font-weight: bold;">देणगीदार</th>
+          <th style="padding: 8px 4px; text-align: left; border: 1px solid black; font-weight: bold;">सेवा</th>
+          <th style="padding: 8px 4px; text-align: left; border: 1px solid black; font-weight: bold;">वस्तू</th>
+          <th style="padding: 8px 4px; text-align: left; border: 1px solid black; font-weight: bold;">प्रमाण</th>
+          <th style="padding: 8px 4px; text-align: right; border: 1px solid black; font-weight: bold;">रक्कम</th>
+          <th style="padding: 8px 4px; text-align: left; border: 1px solid black; font-weight: bold;">दिनांक</th>
+          <th style="padding: 8px 4px; text-align: left; border: 1px solid black; font-weight: bold;">मोबाईल</th>
+          <th style="padding: 8px 4px; text-align: center; border: 1px solid black; font-weight: bold;">क्रिया</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${donations.map((d, index) => {
+          const bgColor = index % 2 === 0 ? '#f5f5f5' : 'white';
+          const formattedDate = d.date ? new Date(d.date).toLocaleDateString('mr-IN') : '-';
+          
+          return `
+          <tr style="background: ${bgColor};">
+            <td style="padding: 6px 4px; border: 1px solid #999; word-wrap: break-word;">${d.donorName || '-'}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999;">
+              <span style="border: 1px solid #666; padding: 2px 4px; display: inline-block;">
+                ${d.service || '-'}
+              </span>
+            </td>
+            <td style="padding: 6px 4px; border: 1px solid #999; word-wrap: break-word;">${d.itemName || '-'}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999;">${d.quantity || 0} ${d.unit || ''}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999; text-align: right;">₹${d.amount || 0}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999;">${formattedDate}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999;">${d.mobile || '-'}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999; text-align: center;">✕</td>
+          </tr>
+        `}).join('')}
+      </tbody>
+    </table>
+  `;
+  
+  // Total
   const totalAmount = donations.reduce((sum, d) => sum + (d.amount || 0), 0);
+  element.innerHTML += `
+    <div style="margin-top: 20px; display: flex; justify-content: space-between; padding: 10px; border: 1px solid black; background: #f5f5f5;">
+      <div><strong>एकूण नोंदी:</strong> ${donations.length}</div>
+      <div><strong>एकूण रक्कम:</strong> ₹${totalAmount.toLocaleString()}</div>
+    </div>
+    <div style="margin-top: 30px; text-align: center; border-top: 1px solid #ccc; padding-top: 15px; font-style: italic;">
+      धन्यवाद! 🙏
+    </div>
+  `;
   
-  // Total section
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  doc.rect(margin, finalY + 10, pageWidth - 2 * margin, 15);
-  doc.setFillColor(245, 245, 245);
-  doc.rect(margin, finalY + 10, pageWidth - 2 * margin, 15, 'F');
+  // Generate PDF with portrait orientation - Black and white optimized
+  const opt = {
+    margin: [0.4, 0.4, 0.4, 0.4] as [number, number, number, number],
+    filename: `देणगी_अहवाल_${new Date().toISOString().split('T')[0]}.pdf`,
+    image: { type: 'jpeg' as const, quality: 1.0 },
+    html2canvas: { 
+      scale: 1.8, // Higher scale for better quality in portrait
+      useCORS: true,
+      letterRendering: true,
+      logging: false,
+      backgroundColor: '#ffffff'
+    },
+    jsPDF: { 
+      unit: 'in' as const,
+      format: 'a4' as const,
+      orientation: 'portrait' as const // Changed to portrait
+    }
+  };
   
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(0, 0, 0);
-  doc.text(`एकूण नोंदी: ${donations.length}`, margin + 5, finalY + 20);
-  doc.text(`एकूण रक्कम: ₹${totalAmount.toLocaleString()}`, pageWidth - margin - 5, finalY + 20, { align: 'right' });
-
-  // Footer with thank you message
-  doc.setDrawColor(204, 204, 204);
-  doc.setLineWidth(0.2);
-  doc.line(margin, finalY + 35, pageWidth - margin, finalY + 35);
-  
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(12);
-  doc.setTextColor(0, 0, 0);
-  doc.text('धन्यवाद! 🙏', pageWidth / 2, finalY + 50, { align: 'center' });
-
-  // Save PDF
-  doc.save(`देणगी_अहवाल_${new Date().toISOString().split('T')[0]}.pdf`);
+  html2pdf().set(opt).from(element).save();
 };
 
-// Simple version without stats
+// Simple version without stats - VERTICAL & BLACK & WHITE
 export const generateSimpleDonationsPDF = (donations: Donation[], title: string = 'देणगी यादी') => {
-  // Create new PDF document
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  });
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 15;
-  let currentY = margin;
-
-  // Header
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(24);
-  doc.setTextColor(0, 0, 0);
-  doc.text('श्री राम मंदिर', pageWidth / 2, currentY, { align: 'center' });
+  const element = document.createElement('div');
+  element.style.width = '800px'; // Width for portrait
+  element.style.padding = '20px';
+  element.style.fontFamily = "'Noto Sans Devanagari', sans-serif";
+  element.style.backgroundColor = 'white';
+  element.style.color = 'black';
+  element.style.fontSize = '12px';
   
-  currentY += 10;
-  doc.setFontSize(20);
-  doc.text(title, pageWidth / 2, currentY, { align: 'center' });
+  element.innerHTML = `
+    <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px;">
+      <h1 style="font-size: 24px; margin: 0; font-weight: bold; color: black;">श्री राम मंदिर</h1>
+      <h2 style="font-size: 20px; margin: 5px 0; font-weight: bold; color: black;">${title}</h2>
+      <p style="font-size: 12px; color: #333;">${new Date().toLocaleDateString('mr-IN', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      })}</p>
+    </div>
+    
+    <h3 style="font-size: 16px; margin: 20px 0 10px 0; font-weight: bold; border-bottom: 1px solid black; padding-bottom: 5px;">देणगी तपशील</h3>
+    <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+      <colgroup>
+        <col style="width: 140px">
+        <col style="width: 70px">
+        <col style="width: 100px">
+        <col style="width: 60px">
+        <col style="width: 70px">
+        <col style="width: 80px">
+        <col style="width: 90px">
+        <col style="width: 50px">
+      </colgroup>
+      <thead>
+        <tr style="background: #e0e0e0; border: 1px solid black;">
+          <th style="padding: 8px 4px; border: 1px solid black; font-weight: bold;">देणगीदार</th>
+          <th style="padding: 8px 4px; border: 1px solid black; font-weight: bold;">सेवा</th>
+          <th style="padding: 8px 4px; border: 1px solid black; font-weight: bold;">वस्तू</th>
+          <th style="padding: 8px 4px; border: 1px solid black; font-weight: bold;">प्रमाण</th>
+          <th style="padding: 8px 4px; border: 1px solid black; font-weight: bold;">रक्कम</th>
+          <th style="padding: 8px 4px; border: 1px solid black; font-weight: bold;">दिनांक</th>
+          <th style="padding: 8px 4px; border: 1px solid black; font-weight: bold;">मोबाईल</th>
+          <th style="padding: 8px 4px; border: 1px solid black; font-weight: bold;">क्रिया</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${donations.map((d, index) => {
+          const bgColor = index % 2 === 0 ? '#f5f5f5' : 'white';
+          return `
+          <tr style="background: ${bgColor};">
+            <td style="padding: 6px 4px; border: 1px solid #999;">${d.donorName || '-'}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999;">${d.service || '-'}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999;">${d.itemName || '-'}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999;">${d.quantity || 0} ${d.unit || ''}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999; text-align: right;">₹${d.amount || 0}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999;">${d.date ? new Date(d.date).toLocaleDateString('mr-IN') : '-'}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999;">${d.mobile || '-'}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999; text-align: center;">✕</td>
+          </tr>
+        `}).join('')}
+      </tbody>
+    </table>
+    
+    <div style="margin-top: 20px; text-align: right; font-weight: bold; border-top: 1px solid #999; padding-top: 10px;">
+      एकूण रक्कम: ₹${donations.reduce((sum, d) => sum + (d.amount || 0), 0).toLocaleString()}
+    </div>
+    <div style="margin-top: 30px; text-align: center; border-top: 1px solid #ccc; padding-top: 15px; font-style: italic;">
+      धन्यवाद! 🙏
+    </div>
+  `;
   
-  currentY += 8;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
-  doc.setTextColor(51, 51, 51);
-  doc.text(formatMarathiDate(new Date()), pageWidth / 2, currentY, { align: 'center' });
-  
-  currentY += 15;
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  doc.line(margin, currentY, pageWidth - margin, currentY);
-  currentY += 15;
-
-  // Table title
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text('देणगी तपशील', margin, currentY);
-  
-  currentY += 8;
-  doc.line(margin, currentY, pageWidth - margin, currentY);
-  currentY += 8;
-
-  // Prepare table data
-  const tableBody = donations.map((d) => {
-    const formattedDate = d.date ? new Date(d.date).toLocaleDateString('mr-IN') : '-';
-    return [
-      d.donorName || '-',
-      d.service || '-',
-      d.itemName || '-',
-      `${d.quantity || 0} ${d.unit || ''}`.trim(),
-      `₹${d.amount || 0}`,
-      formattedDate,
-      d.mobile || '-',
-      '✕'
-    ];
-  });
-
-  // Generate table
-  autoTable(doc, {
-    head: [['देणगीदार', 'सेवा', 'वस्तू', 'प्रमाण', 'रक्कम', 'दिनांक', 'मोबाईल', 'क्रिया']],
-    body: tableBody,
-    startY: currentY,
-    theme: 'grid',
-    styles: {
-      fontSize: 9,
-      cellPadding: 2,
-      lineColor: [0, 0, 0],
-      lineWidth: 0.1,
-      textColor: [0, 0, 0],
-      font: 'helvetica'
+  // Portrait orientation for simple version too
+  const opt = {
+    margin: [0.4, 0.4, 0.4, 0.4] as [number, number, number, number],
+    filename: `देणगी_यादी_${new Date().toISOString().split('T')[0]}.pdf`,
+    image: { type: 'jpeg' as const, quality: 1.0 },
+    html2canvas: { 
+      scale: 1.8, 
+      useCORS: true,
+      backgroundColor: '#ffffff'
     },
-    headStyles: {
-      fillColor: [224, 224, 224],
-      textColor: [0, 0, 0],
-      fontStyle: 'bold',
-      halign: 'center',
-      lineColor: [0, 0, 0],
-      lineWidth: 0.2
-    },
-    columnStyles: {
-      0: { cellWidth: 35 },
-      1: { cellWidth: 20 },
-      2: { cellWidth: 30 },
-      3: { cellWidth: 15, halign: 'center' },
-      4: { cellWidth: 20, halign: 'right' },
-      5: { cellWidth: 25, halign: 'center' },
-      6: { cellWidth: 25 },
-      7: { cellWidth: 15, halign: 'center' }
-    },
-    alternateRowStyles: {
-      fillColor: [245, 245, 245]
-    },
-    margin: { left: margin, right: margin }
-  });
-
-  // Get final Y position
-  const finalY = (doc as any).lastAutoTable.finalY || currentY + 50;
-
-  // Total amount
-  const totalAmount = donations.reduce((sum, d) => sum + (d.amount || 0), 0);
+    jsPDF: { 
+      unit: 'in' as const,
+      format: 'a4' as const,
+      orientation: 'portrait' as const // Changed to portrait
+    }
+  };
   
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  doc.line(margin, finalY + 10, pageWidth - margin, finalY + 10);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text(`एकूण रक्कम: ₹${totalAmount.toLocaleString()}`, pageWidth - margin, finalY + 20, { align: 'right' });
-
-  // Footer
-  doc.setDrawColor(204, 204, 204);
-  doc.setLineWidth(0.2);
-  doc.line(margin, finalY + 35, pageWidth - margin, finalY + 35);
-  
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(12);
-  doc.text('धन्यवाद! 🙏', pageWidth / 2, finalY + 50, { align: 'center' });
-
-  // Save PDF
-  doc.save(`देणगी_यादी_${new Date().toISOString().split('T')[0]}.pdf`);
+  html2pdf().set(opt).from(element).save();
 };
