@@ -1,0 +1,16 @@
+services:
+  # Backend API
+  - type: web
+    name: myapp-backend
+    env: node
+    rootDir: ./backend
+    buildCommand: npm install
+    startCommand: npm start
+    
+  # Frontend Static Site
+  - type: web
+    name: myapp-frontend
+    env: static
+    rootDir: ./frontend
+    buildCommand: npm run build
+    staticPublishPath: ./dist
