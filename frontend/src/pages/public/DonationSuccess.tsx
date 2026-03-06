@@ -18,13 +18,13 @@ const DonationSuccess: React.FC = () => {
             className="qr-square-image"
           />
           <p className="qr-upi-id">UPI ID: shivkumarchavan.sc@oksbi</p>
-          <p className="qr-instruction">Scan to pay with any UPI app</p>
+          <p className="qr-instruction">Google pay no  9552297302</p>
         </div>
         
         <p>कृपया देणगी नोंद करून आपण केलेले पेमेंट स्क्रीनशॉट 9503959906 या नंबर वर व्हॉट्सॲप वर पाठवणे ही विनंती.</p>
         
         <div className="success-details">
-          <p>श्री रामाचा आशीर्वाद आपल्यावर सदैव राहो. 🙏</p>
+          <p>श्री रामाचा आशीर्वाद आपल्यावर सदैव राहो.🙏</p>
         </div>
 
         <a href="/" className="home-btn">
