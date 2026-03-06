@@ -2,7 +2,7 @@ services:
   # Backend API
   - type: web
     name: myapp-backend
-    runtime: node        # Use 'runtime' instead of 'env'
+    runtime: node
     rootDir: ./backend
     buildCommand: npm install
     startCommand: npm start
@@ -10,9 +10,13 @@ services:
   # Frontend Static Site
   - type: web
     name: myapp-frontend
-    runtime: static      # Use 'runtime' instead of 'env'
+    runtime: static
     rootDir: ./frontend
-    # ✅ Correct build command: install dependencies THEN build
-    buildCommand: npm install && npm run build
-    # ✅ Correct publish directory for Create React App
+    buildCommand: |  # This allows multi-line commands
+      npm install
+      npm run build
     staticPublishPath: ./build
+    # Optional: Add environment variables if needed
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://your-backend-url.onrender.com
