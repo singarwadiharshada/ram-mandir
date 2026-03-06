@@ -1,24 +1,18 @@
 services:
   # Backend API
   - type: web
-    name: shriram-mandir-backend
-    runtime: node
+    name: myapp-backend
+    runtime: node        # Use 'runtime' instead of 'env'
     rootDir: ./backend
     buildCommand: npm install
     startCommand: npm start
-    envVars:
-      - key: NODE_VERSION
-        value: 18.17.0
 
   # Frontend Static Site
   - type: web
-    name: shriram-mandir-frontend
-    runtime: static
+    name: myapp-frontend
+    runtime: static      # Use 'runtime' instead of 'env'
     rootDir: ./frontend
+    # ✅ Correct build command: install dependencies THEN build
     buildCommand: npm install && npm run build
+    # ✅ Correct publish directory for Create React App
     staticPublishPath: ./build
-    envVars:
-      - key: NODE_VERSION
-        value: 18.17.0
-      - key: REACT_APP_API_URL
-        value: https://myapp-backend.onrender.com  # Update with your actual backend URL
