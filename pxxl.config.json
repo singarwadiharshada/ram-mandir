@@ -1,0 +1,12 @@
+{
+  "name": "ram-mandir",
+  "build": {
+    "command": "npm run build",
+    "directory": "frontend",
+    "output": "build"
+  },
+  "nginx": {
+    "config": "frontend/nginx.conf"
+  },
+  "port": 3000
+}
