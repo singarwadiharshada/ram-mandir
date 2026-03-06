@@ -1,7 +1,7 @@
 {
   "name": "shriram-mandir-frontend",
   "version": "1.0.0",
-  "homepage": ".",
+  "homepage": "https://ram-mandir-frontend.onrender.com",
   "private": true,
   "dependencies": {
     "@fontsource/noto-sans-devanagari": "^5.2.8",
