@@ -37,7 +37,7 @@ const DonationForm: React.FC = () => {
 
   // Initialize audio
   useEffect(() => {
-    audioRef.current = new Audio('/sounds/success.mp3');
+    audioRef.current = new Audio('/sounds/jai-shree-ram.mp3');
     
     return () => {
       if (audioRef.current) {
@@ -106,6 +106,27 @@ const DonationForm: React.FC = () => {
     }
   };
 
+  // Function to download invitation image
+  const downloadInvitation = () => {
+    // Create a link element
+    const link = document.createElement('a');
+    
+    // Path to your invitation image in the public folder
+    // Make sure to place your invitation image in the public folder with this name
+    link.href = '/images/Invitationcard.jpeg'; // or .png based on your file
+    
+    // Set the download attribute with filename
+    link.download = 'shri-ram-janmotsav-invitation.jpeg';
+    
+    // Append to body, click and remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Show success toast
+    showToast('आमंत्रण पत्रिका डाउनलोड होत आहे...', 'success');
+  };
+
   // Create donation mutation with improved error handling
   const createMutation = useMutation({
     mutationFn: (data: typeof formData) => {
@@ -144,13 +165,6 @@ const DonationForm: React.FC = () => {
       }
       
       console.log('Processed donation data being sent:', JSON.stringify(donationData, null, 2));
-      
-      // Validation check
-      if (data.service === 'महाप्रसाद') {
-        console.log('Checking Mahaprasad donation - amount should be undefined:', donationData.amount);
-      } else {
-        console.log('Checking Abhishek/Other donation - amount should be number:', donationData.amount);
-      }
       
       return api.createPublicDonation(donationData);
     },
@@ -296,7 +310,7 @@ const DonationForm: React.FC = () => {
 
   return (
     <div className="donation-form-container with-bg-image">
-      {/* Temple Header with Logo on Left and Login on Right */}
+      {/* Temple Header with Logo on Left, Invitation Button and Login on Right */}
       <div className="temple-header">
         <div className="header-logo">
           <img 
@@ -311,15 +325,24 @@ const DonationForm: React.FC = () => {
           <h2 className="festival-title">श्री राम जन्मोत्सव २०२६</h2>
         </div>
         
-        {/* Login Button on Right Side */}
-        <div className="header-login">
+        {/* Invitation Download Button and Login */}
+        <div className="header-actions">
+          <button 
+            className="invitation-download-btn"
+            onClick={downloadInvitation}
+            title="आमंत्रण पत्रिका डाउनलोड करा"
+          >
+            <span className="invitation-icon">📥</span>
+            <span className="invitation-text">आमंत्रण पत्रिका</span>
+          </button>
+          
           <a href="/login" className="login-btn">
             <span className="login-icon">लॉग इन</span>
           </a>
         </div>
       </div>
 
-      {/* Temple Information Container (Image removed, text preserved) */}
+      {/* Temple Information Container */}
       <div className="temple-info-container">
         <div className="temple-info-text">
           <div>स्थापना - 1922. रजि नं A-9</div>
@@ -522,7 +545,7 @@ const DonationForm: React.FC = () => {
             className="submit-btn" 
             disabled={createMutation.isPending}
           >
-            {createMutation.isPending ? 'नोंदवत आहे...' : 'जय श्री राम 🔥'}
+            {createMutation.isPending ? 'नोंदवत आहे...' : 'जय श्री राम 🙏'}
           </button>
         </form>
       </div>

@@ -51,7 +51,7 @@
   z-index: 1;
 }
 
-/* Temple Header with Login Button */
+/* Temple Header with Logo, Info, and Actions */
 .temple-header {
   background: linear-gradient(135deg, var(--saffron), var(--gold), var(--saffron));
   color: var(--text-light);
@@ -91,12 +91,26 @@
   to { transform: rotate(360deg); }
 }
 
+.header-logo {
+  flex: 0 0 auto;
+  margin-right: 1rem;
+  order: 1;
+}
+
+.temple-logo {
+  height: 90px;
+  width: auto;
+  object-fit: contain;
+}
+
 .header-content {
   flex: 1;
   min-width: 300px;
   position: relative;
   z-index: 1;
   animation: fadeInLeft 0.8s ease-out;
+  order: 2;
+  text-align: center;
 }
 
 @keyframes fadeInLeft {
@@ -113,10 +127,10 @@
 .main-title {
   font-size: 36px;
   margin-bottom: 8px;
-  text-shadow: var(--vermilion);
   font-weight: bold;
   line-height: 1.2;
   animation: glow 3s ease-in-out infinite;
+  color: var(--text-light);
 }
 
 @keyframes glow {
@@ -228,9 +242,46 @@
   }
 }
 
-.header-login {
+/* Temple Info Container - This appears in the header on mobile */
+.temple-info-container {
+  background-color: transparent;
+  border: transparent;
+  border-radius: 15px;
+  padding: 20px;
+  margin: 20px auto;
+  max-width: 900px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(255, 153, 51, 0.2);
+  backdrop-filter: blur(5px);
+  width: 90%;
+  font-weight: 100;
+}
+
+.with-bg-image .temple-info-container {
+  background-color: transparent;
+  backdrop-filter: blur(8px);
+}
+
+.temple-info-text {
+  font-size: 18px;
+  line-height: 2;
+  color: var(--text-dark);
+  font-weight: 500;
+}
+
+.temple-info-text div {
+  margin: 8px 0;
+  font-weight: 500;
+}
+
+/* Header Actions - Invitation Button and Login */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
   flex-shrink: 0;
   animation: fadeInRight 0.8s ease-out;
+  order: 3;
 }
 
 @keyframes fadeInRight {
@@ -244,17 +295,77 @@
   }
 }
 
+.invitation-download-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.invitation-download-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.invitation-download-btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.invitation-download-btn:hover {
+  background: linear-gradient(135deg, #45a049, #3d8b40);
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(76, 175, 80, 0.5);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.invitation-download-btn:active {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.invitation-icon {
+  font-size: 1.3rem;
+  animation: bounce 2s infinite;
+}
+
+.invitation-text {
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+/* Login Button */
 .login-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(255, 215, 0, 0.2);
+  gap: 8px;
+  background: linear-gradient(135deg, var(--saffron), var(--gold));
   color: var(--text-light);
-  padding: 12px 28px;
+  padding: 12px 24px;
   border-radius: 50px;
   text-decoration: none;
-  font-weight: bold;
-  border: 2px solid var(--gold);
+  font-weight: 600;
+  border: 2px solid rgba(255, 255, 255, 0.3);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 15px rgba(227, 66, 52, 0.2);
@@ -281,27 +392,14 @@
 }
 
 .login-btn:hover {
-  background: var(--gold);
-  color: var(--vermilion);
-  transform: scale(1.1) rotate(2deg);
-  box-shadow: 0 8px 25px rgba(227, 66, 52, 0.3);
+  background: linear-gradient(135deg, var(--gold), var(--saffron));
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(227, 66, 52, 0.4);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .login-icon {
-  font-size: 22px;
-  animation: wave 2s infinite;
-}
-
-@keyframes wave {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(15deg); }
-  75% { transform: rotate(-10deg); }
-}
-
-.login-text {
-  font-size: 16px;
-  white-space: nowrap;
-  font-weight: 600;
+  font-size: 1.2rem;
 }
 
 /* Form Wrapper - Enhanced for background image */
@@ -810,7 +908,7 @@
   60%, 100% { content: '...'; }
 }
 
-/* Toast Animation (already in Toast.css, but ensure smooth) */
+/* Toast Animation */
 .toast {
   animation: slideInToast 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
 }
@@ -833,161 +931,7 @@
   }
 }
 
-/* Responsive Design - Enhanced with animations */
-@media (max-width: 992px) {
-  .main-title {
-    font-size: 30px;
-  }
-  
-  .festival-title {
-    font-size: 24px;
-  }
-  
-  .dates-headline {
-    font-size: 18px;
-  }
-  
-  .address-headline {
-    font-size: 16px;
-  }
-  
-  .address-headline::before {
-    display: none;
-  }
-}
-
-@media (max-width: 768px) {
-  .temple-header {
-    flex-direction: column;
-    text-align: center;
-    padding: 20px;
-  }
-  
-  .header-content {
-    width: 100%;
-  }
-  
-  .header-login {
-    width: 100%;
-  }
-  
-  .login-btn {
-    width: 100%;
-    justify-content: center;
-    animation: pulse 2s infinite;
-  }
-  
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-  }
-  
-  .main-title {
-    font-size: 26px;
-  }
-  
-  .festival-title {
-    font-size: 22px;
-  }
-  
-  .dates-headline {
-    font-size: 16px;
-    display: block;
-    text-align: center;
-  }
-  
-  .address-headline {
-    font-size: 15px;
-  }
-  
-  .form-wrapper {
-    margin: 20px 15px;
-    padding: 25px;
-  }
-  
-  .items-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .main-title {
-    font-size: 22px;
-  }
-  
-  .festival-title {
-    font-size: 20px;
-  }
-  
-  .dates-headline {
-    font-size: 15px;
-  }
-  
-  .address-headline {
-    font-size: 14px;
-  }
-  
-  .login-btn {
-    padding: 10px 20px;
-  }
-  
-  .login-icon {
-    font-size: 18px;
-  }
-  
-  .login-text {
-    font-size: 14px;
-  }
-  
-  .items-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .selected-item-info {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .selected-item-info small {
-    margin-left: 0;
-    display: block;
-  }
-  
-  .quantity-input button {
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
-  }
-  
-  .submit-btn {
-    font-size: 18px;
-    padding: 15px;
-  }
-  
-  .public-footer p {
-    font-size: 12px;
-  }
-}
-
-/* Print Styles */
-@media print {
-  .temple-header,
-  .form-wrapper,
-  .public-footer {
-    box-shadow: none;
-    animation: none;
-  }
-  
-  .login-btn,
-  .submit-btn {
-    display: none !important;
-  }
-  
-  .temple-header::before,
-  .public-footer::before {
-    display: none;
-  }
-}
+/* Temple Image Container (if you have it) */
 .temple-image-container {
   position: relative;
   width: 100%;
@@ -1022,8 +966,118 @@
   line-height: 1.5;
 }
 
-/* Responsive adjustments */
+/* Responsive Design */
+@media (max-width: 992px) {
+  .main-title {
+    font-size: 30px;
+  }
+  
+  .festival-title {
+    font-size: 24px;
+  }
+  
+  .dates-headline {
+    font-size: 18px;
+  }
+  
+  .address-headline {
+    font-size: 16px;
+  }
+  
+  .address-headline::before {
+    display: none;
+  }
+  
+  .header-actions {
+    gap: 10px;
+  }
+  
+  .invitation-download-btn,
+  .login-btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+  
+  .invitation-icon,
+  .login-icon {
+    font-size: 1.1rem;
+  }
+  
+  .temple-info-text {
+    font-size: 16px;
+  }
+}
+
 @media (max-width: 768px) {
+  .temple-header {
+    flex-direction: column;
+    padding: 15px 20px;
+    gap: 15px;
+  }
+  
+  .header-logo {
+    order: 1;
+    margin-right: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .temple-logo {
+    height: 70px;
+  }
+  
+  .header-content {
+    order: 2;
+    width: 100%;
+    min-width: 100%;
+    margin: 0;
+  }
+  
+  .main-title {
+    font-size: 24px;
+    margin-bottom: 5px;
+  }
+  
+  .festival-title {
+    font-size: 20px;
+    margin-bottom: 5px;
+  }
+  
+  .temple-info-container {
+    order: 3;
+    width: 100%;
+    margin: 10px 0;
+    padding: 15px;
+  }
+  
+  .header-actions {
+    order: 4;
+    width: 100%;
+    justify-content: center;
+    margin-top: 5px;
+  }
+  
+  .invitation-download-btn .invitation-text,
+  .login-btn .login-text {
+    display: inline-block;
+    font-size: 0.9rem;
+  }
+  
+  .temple-info-text {
+    font-size: 15px;
+    line-height: 1.8;
+  }
+  
+  .form-wrapper {
+    margin: 20px 15px;
+    padding: 25px;
+  }
+  
+  .items-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
   .image-text-overlay {
     padding: 15px;
     font-size: 0.9rem;
@@ -1033,132 +1087,164 @@
     font-size: 0.9rem;
   }
 }
-/* Add to your existing CSS */
 
-.temple-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem;
-  background-color: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: relative;
-  z-index: 10;
-}
-
-.header-logo {
-  flex: 0 0 auto;
-  margin-right: 1rem;
-}
-
-.temple-logo {
-  height: 90px;
-  width: auto;
-  object-fit: contain;
-}
-
-.header-content {
-  flex: 1;
-  text-align: center;
-}
-
-.header-login {
-  flex: 0 0 auto;
-  margin-left: 1rem;
-}
-
-.main-title {
-  font-size: 1.5rem;
-  margin: 0;
-  color: #b8860b;
-  font-weight: bold;
-}
-
-.festival-title {
-  font-size: 1.2rem;
-  margin: 0.25rem 0 0;
-  color: #8b4513;
-}
-
-.login-btn {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  background-color: #b8860b;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  transition: background-color 0.3s;
-}
-
-.login-btn:hover {
-  background-color: #8b4513;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .temple-header {
-    padding: 0.75rem 1rem;
+@media (max-width: 600px) {
+  .header-actions {
+    gap: 8px;
   }
-
-  .temple-logo {
-    height: 45px;
+  
+  .invitation-download-btn,
+  .login-btn {
+    padding: 8px 16px;
   }
-
-  .main-title {
-    font-size: 1.2rem;
+  
+  .invitation-download-btn .invitation-text,
+  .login-btn .login-text {
+    font-size: 0.85rem;
   }
-
-  .festival-title {
+  
+  .invitation-icon,
+  .login-icon {
     font-size: 1rem;
   }
-
-  .login-btn {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.9rem;
+  
+  .main-title {
+    font-size: 22px;
+  }
+  
+  .festival-title {
+    font-size: 18px;
+  }
+  
+  .temple-info-text {
+    font-size: 14px;
   }
 }
 
 @media (max-width: 480px) {
   .temple-header {
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    padding: 12px 12px;
+    gap: 12px;
   }
-
+  
   .header-logo {
     order: 1;
   }
-
-  .header-content {
-    order: 3;
-    flex: 0 0 100%;
-    margin-top: 0.5rem;
+  
+  .temple-logo {
+    height: 60px;
   }
-
-  .header-login {
+  
+  .header-content {
     order: 2;
   }
-}
-.temple-info-container {
-  background-color:transparent;
-  border: transparent;
-  /* border-radius: 8px; */
-  padding: 15px;
-  margin: 20px auto;
-  max-width: 800px;
-  text-align: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  font-size: 20px;
-  font-weight: bolder;
+  
+  .main-title {
+    font-size: 20px;
+  }
+  
+  .festival-title {
+    font-size: 16px;
+  }
+  
+  .temple-info-container {
+    order: 3;
+    padding: 12px;
+    margin: 5px 0;
+  }
+  
+  .temple-info-text {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  
+  .temple-info-text div {
+    margin: 5px 0;
+  }
+  
+  .header-actions {
+    order: 4;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .invitation-download-btn,
+  .login-btn {
+    padding: 8px 15px;
+    flex: 1;
+    min-width: 120px;
+    justify-content: center;
+  }
+  
+  .invitation-download-btn .invitation-text,
+  .login-btn .login-text {
+    display: inline-block;
+    font-size: 0.85rem;
+  }
+  
+  .invitation-icon,
+  .login-icon {
+    font-size: 1rem;
+    margin-right: 4px;
+  }
+  
+  .form-wrapper {
+    margin: 15px 10px;
+    padding: 20px;
+  }
+  
+  .form-wrapper h3 {
+    font-size: 22px;
+  }
+  
+  .items-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .selected-item-info {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .selected-item-info small {
+    margin-left: 0;
+    display: block;
+    margin-top: 5px;
+  }
+  
+  .quantity-input button {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+  
+  .submit-btn {
+    font-size: 18px;
+    padding: 15px;
+  }
+  
+  .public-footer p {
+    font-size: 12px;
+  }
 }
 
-.temple-info-text {
-  font-size: 16px;
-  line-height: 1.8;
-  color: #333;
-}
-
-.temple-info-text div {
-  margin: 5px 0;
-  font-weight: 500;
+/* Print Styles */
+@media print {
+  .temple-header,
+  .form-wrapper,
+  .public-footer {
+    box-shadow: none;
+    animation: none;
+  }
+  
+  .login-btn,
+  .submit-btn,
+  .invitation-download-btn {
+    display: none !important;
+  }
+  
+  .temple-header::before,
+  .public-footer::before {
+    display: none;
+  }
 }
