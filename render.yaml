@@ -7,16 +7,16 @@ services:
     buildCommand: npm install
     startCommand: npm start
 
-  # Frontend Static Site
-  - type: web
+  # Frontend Static Site - CHANGED THIS FROM 'web' TO 'static'
+  - type: static
     name: myapp-frontend
     runtime: static
     rootDir: ./frontend
-    buildCommand: |  # This allows multi-line commands
+    buildCommand: |
       npm install
       npm run build
     staticPublishPath: ./build
     # Optional: Add environment variables if needed
     envVars:
       - key: REACT_APP_API_URL
-        value: https://your-backend-url.onrender.com
+        value: https://ram-mandir-back.onrender.com/api
