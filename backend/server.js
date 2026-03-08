@@ -11,6 +11,7 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5000',
+  'https://ram-mandir-rdgj.vercel.app',
   'https://ram-mandir-frontend.onrender.com',
   'https://rammandir2026.netlify.app',  // Your Netlify frontend
   /\.netlify\.app$/, // Allows all Netlify preview deployments
