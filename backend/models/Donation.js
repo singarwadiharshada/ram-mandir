@@ -23,9 +23,21 @@ const donationSchema = new mongoose.Schema({
       return this.service === 'महाप्रसाद';
     }
   },
-  // Store item name for reference (optional)
+  // For "इतर" category - sevaId is required
+  sevaId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Service',
+    required: function() {
+      return this.service === 'इतर';
+    }
+  },
+  // Store item name for reference
   itemName: { 
     type: String 
+  },
+  // Store service name for reference
+  serviceName: {
+    type: String
   },
   // For Mahaprasad - quantity is required
   quantity: { 
@@ -37,7 +49,7 @@ const donationSchema = new mongoose.Schema({
   },
   unit: { 
     type: String,
-    enum: ['kg', 'gram', 'piece', 'liter'],  // ✅ Added 'gram' to enum
+    enum: ['kg', 'gram', 'piece', 'liter'],
     required: function() {
       return this.service === 'महाप्रसाद';
     }
@@ -50,7 +62,7 @@ const donationSchema = new mongoose.Schema({
     },
     min: [1, 'रक्कम १ पेक्षा जास्त असावी']
   },
-  address: {  // ✅ Added address field
+  address: {
     type: String,
     default: ''
   },
