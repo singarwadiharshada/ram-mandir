@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const PrasadItem = require('../models/PrasadItem');
 const Donation = require('../models/Donation');
+const Service = require('../models/Service'); // Add this import
 
 // Get available items for public with pagination
 router.get('/items', async (req, res) => {
@@ -40,6 +41,72 @@ router.get('/items', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching public items:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============ ADD THIS NEW ENDPOINT FOR PUBLIC SERVICES ============
+// Get available services for public
+router.get('/services', async (req, res) => {
+  try {
+    const { category, search, page = 1, limit = 100 } = req.query;
+    let query = { isActive: true }; // Only show active services
+    
+    // Filter by category if provided
+    if (category && category !== 'all') {
+      query.category = category;
+    }
+    
+    // Search in name or description if search term provided
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    console.log('📞 Fetching public services with query:', JSON.stringify(query));
+    
+    // Get services with pagination
+    const services = await Service.find(query)
+      .sort({ name: 1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+    
+    // Get total count for pagination
+    const total = await Service.countDocuments(query);
+    
+    console.log(`✅ Found ${services.length} active services (total: ${total})`);
+    
+    // Return paginated response (matching the format of your items endpoint)
+    res.json({
+      items: services,
+      total: total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit))
+    });
+  } catch (error) {
+    console.error('❌ Error fetching public services:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Optional: Get single service by ID (if needed)
+router.get('/services/:id', async (req, res) => {
+  try {
+    const service = await Service.findOne({ 
+      _id: req.params.id, 
+      isActive: true 
+    });
+    
+    if (!service) {
+      return res.status(404).json({ error: 'सेवा सापडली नाही' });
+    }
+    
+    res.json(service);
+  } catch (error) {
+    console.error('Error fetching public service:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -124,7 +191,7 @@ router.post('/donations', async (req, res) => {
         });
       }
 
-      // IMPORTANT: Update the PrasadItem's received quantity first
+      // Update the PrasadItem's received quantity first
       item.received = Number((item.received + requestedQty).toFixed(3));
       await item.save();
       console.log(`Updated ${item.name} received quantity to ${item.received}`);
@@ -135,12 +202,11 @@ router.post('/donations', async (req, res) => {
         mobile: req.body.mobile,
         service: req.body.service,
         item: item._id,
-        itemName: item.name,  // Store for reference
+        itemName: item.name,
         quantity: requestedQty,
         unit: item.unit,
         address: req.body.address || '',
         date: new Date()
-        // amount field is completely omitted for Mahaprasad
       };
 
       console.log('Creating donation with data:', donationData);
@@ -175,7 +241,6 @@ router.post('/donations', async (req, res) => {
         amount: amount,
         address: req.body.address || '',
         date: new Date()
-        // item-related fields are omitted
       };
 
       console.log('Creating donation with data:', donationData);
@@ -190,12 +255,10 @@ router.post('/donations', async (req, res) => {
   } catch (error) {
     console.error('Public donation error:', error);
     
-    // Handle duplicate key errors or other MongoDB errors
     if (error.code === 11000) {
       return res.status(400).json({ error: 'ही देणगी आधीच नोंदवली गेली आहे' });
     }
     
-    // Handle validation errors
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map((err) => err.message);
       return res.status(400).json({ error: messages.join(', ') });
