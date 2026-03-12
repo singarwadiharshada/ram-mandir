@@ -1,5 +1,5 @@
 import html2pdf from 'html2pdf.js';
-import { Donation, DonationStats, PrasadItem, Service } from '../types';
+import { Donation, DonationStats } from '../types';
 
 interface PDFGenerationParams {
   donations: Donation[];
@@ -11,35 +11,11 @@ interface PDFGenerationParams {
 // Helper function to get display text for item column
 const getItemDisplayText = (donation: Donation): string => {
   if (donation.service === 'इतर') {
-    // For "इतर" category, show the Seva name
-    // Try multiple possible locations for the service name
-    let serviceName = 'सेवा';
-    
-    if (donation.serviceName) {
-      serviceName = donation.serviceName;
-    } else if (donation.sevaId && typeof donation.sevaId === 'object') {
-      // Type assertion to access name property
-      const sevaObj = donation.sevaId as Service;
-      if (sevaObj.name) {
-        serviceName = sevaObj.name;
-      }
-    } else if (donation.itemName) {
-      serviceName = donation.itemName; // Fallback
-    }
-    
-    return serviceName;
+    // For "इतर" category, show the Seva name (service name)
+    return donation.serviceName || donation.sevaId || donation.itemName || 'सेवा';
   } else if (donation.service === 'महाप्रसाद') {
     // For Mahaprasad, show the item name
-    if (donation.itemName) {
-      return donation.itemName;
-    } else if (donation.item && typeof donation.item === 'object') {
-      // Type assertion to access name property
-      const itemObj = donation.item as PrasadItem;
-      if (itemObj.name) {
-        return itemObj.name;
-      }
-    }
-    return '-';
+    return donation.itemName || '-';
   } else {
     // For Abhishek, show dash
     return '-';
@@ -51,54 +27,31 @@ const getQuantityDisplayText = (donation: Donation): string => {
   if (donation.service === 'महाप्रसाद') {
     return `${donation.quantity || 0} ${donation.unit || ''}`;
   } else {
+    // For Abhishek and "इतर", show dash or empty
     return '-';
   }
 };
 
 // Helper function to get amount display
 const getAmountDisplayText = (donation: Donation): string => {
-  if (donation.amount && donation.amount > 0) {
-    return `₹${donation.amount}`;
+  if (donation.amount > 0) {
+    return `₹${donation.amount || 0}`;
   }
   return '-';
-};
-
-// Helper function to get service display
-const getServiceDisplayText = (donation: Donation): string => {
-  if (donation.service === 'इतर') {
-    // Try to get the service name from various places
-    let serviceName = '';
-    
-    if (donation.serviceName) {
-      serviceName = donation.serviceName;
-    } else if (donation.sevaId && typeof donation.sevaId === 'object') {
-      // Type assertion to access name property
-      const sevaObj = donation.sevaId as Service;
-      if (sevaObj.name) {
-        serviceName = sevaObj.name;
-      }
-    }
-    
-    if (serviceName) {
-      return `इतर (${serviceName})`;
-    }
-    return 'इतर';
-  }
-  return donation.service || '-';
 };
 
 // Full report with stats - VERTICAL & BLACK & WHITE
 export const generateDonationsPDF = ({ donations, stats }: PDFGenerationParams) => {
   // Create a hidden div with OPTIMIZED width for portrait
   const element = document.createElement('div');
-  element.style.width = '800px';
+  element.style.width = '800px'; // Reduced width for portrait
   element.style.padding = '20px';
   element.style.fontFamily = "'Noto Sans Devanagari', sans-serif";
   element.style.backgroundColor = 'white';
   element.style.color = 'black';
-  element.style.fontSize = '12px';
+  element.style.fontSize = '12px'; // Slightly larger for portrait
   
-  // Header
+  // Header - Black and white only
   element.innerHTML = `
     <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px;">
       <h1 style="font-size: 24px; margin: 0; font-weight: bold; color: black;">श्री राम मंदिर</h1>
@@ -111,7 +64,7 @@ export const generateDonationsPDF = ({ donations, stats }: PDFGenerationParams) 
     </div>
   `;
   
-  // Stats in a grid
+  // Stats in a grid - Black and white only
   if (stats) {
     element.innerHTML += `
       <div style="display: flex; justify-content: space-between; margin-bottom: 25px; gap: 10px;">
@@ -135,19 +88,19 @@ export const generateDonationsPDF = ({ donations, stats }: PDFGenerationParams) 
     `;
   }
   
-  // Table
+  // Table with OPTIMIZED column widths for portrait (total 800px)
   element.innerHTML += `
     <h3 style="font-size: 16px; margin: 20px 0 10px 0; font-weight: bold; border-bottom: 1px solid black; padding-bottom: 5px;">देणगी तपशील</h3>
     <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
       <colgroup>
-        <col style="width: 140px">
-        <col style="width: 70px">
-        <col style="width: 120px">
-        <col style="width: 60px">
-        <col style="width: 70px">
-        <col style="width: 80px">
-        <col style="width: 90px">
-        <col style="width: 50px">
+        <col style="width: 140px"> <!-- देणगीदाराचे नाव -->
+        <col style="width: 70px">  <!-- सेवा -->
+        <col style="width: 120px"> <!-- वस्तू/सेवा (INCREASED WIDTH for Seva names) -->
+        <col style="width: 60px">  <!-- प्रमाण -->
+        <col style="width: 70px">  <!-- रक्कम -->
+        <col style="width: 80px">  <!-- दिनांक -->
+        <col style="width: 90px">  <!-- मोबाईल -->
+        <col style="width: 50px">  <!-- क्रिया -->
       </colgroup>
       <thead>
         <tr style="background: #e0e0e0; border: 1px solid black;">
@@ -168,14 +121,13 @@ export const generateDonationsPDF = ({ donations, stats }: PDFGenerationParams) 
           const itemDisplay = getItemDisplayText(d);
           const quantityDisplay = getQuantityDisplayText(d);
           const amountDisplay = getAmountDisplayText(d);
-          const serviceDisplay = getServiceDisplayText(d);
           
           return `
           <tr style="background: ${bgColor};">
             <td style="padding: 6px 4px; border: 1px solid #999; word-wrap: break-word;">${d.donorName || '-'}</td>
             <td style="padding: 6px 4px; border: 1px solid #999;">
               <span style="border: 1px solid #666; padding: 2px 4px; display: inline-block; font-size: 10px;">
-                ${serviceDisplay}
+                ${d.service || '-'}
               </span>
             </td>
             <td style="padding: 6px 4px; border: 1px solid #999; word-wrap: break-word;">
@@ -193,7 +145,7 @@ export const generateDonationsPDF = ({ donations, stats }: PDFGenerationParams) 
     </table>
   `;
   
-  // Calculate totals
+  // Calculate totals properly
   const totalAmount = donations.reduce((sum, d) => sum + (d.amount || 0), 0);
   const mahaprasadCount = donations.filter(d => d.service === 'महाप्रसाद').length;
   const abhishekCount = donations.filter(d => d.service === 'अभिषेक').length;
@@ -212,13 +164,13 @@ export const generateDonationsPDF = ({ donations, stats }: PDFGenerationParams) 
     </div>
   `;
   
-  // Generate PDF
+  // Generate PDF with portrait orientation - Black and white optimized
   const opt = {
     margin: [0.4, 0.4, 0.4, 0.4] as [number, number, number, number],
     filename: `देणगी_अहवाल_${new Date().toISOString().split('T')[0]}.pdf`,
     image: { type: 'jpeg' as const, quality: 1.0 },
     html2canvas: { 
-      scale: 1.8,
+      scale: 1.8, // Higher scale for better quality in portrait
       useCORS: true,
       letterRendering: true,
       logging: false,
@@ -227,17 +179,17 @@ export const generateDonationsPDF = ({ donations, stats }: PDFGenerationParams) 
     jsPDF: { 
       unit: 'in' as const,
       format: 'a4' as const,
-      orientation: 'portrait' as const
+      orientation: 'portrait' as const // Changed to portrait
     }
   };
   
   html2pdf().set(opt).from(element).save();
 };
 
-// Simple version without stats
+// Simple version without stats - VERTICAL & BLACK & WHITE
 export const generateSimpleDonationsPDF = (donations: Donation[], title: string = 'देणगी यादी') => {
   const element = document.createElement('div');
-  element.style.width = '800px';
+  element.style.width = '800px'; // Width for portrait
   element.style.padding = '20px';
   element.style.fontFamily = "'Noto Sans Devanagari', sans-serif";
   element.style.backgroundColor = 'white';
@@ -286,14 +238,13 @@ export const generateSimpleDonationsPDF = (donations: Donation[], title: string 
           const itemDisplay = getItemDisplayText(d);
           const quantityDisplay = getQuantityDisplayText(d);
           const amountDisplay = getAmountDisplayText(d);
-          const serviceDisplay = getServiceDisplayText(d);
           
           return `
           <tr style="background: ${bgColor};">
             <td style="padding: 6px 4px; border: 1px solid #999;">${d.donorName || '-'}</td>
             <td style="padding: 6px 4px; border: 1px solid #999;">
               <span style="border: 1px solid #666; padding: 2px 4px; display: inline-block; font-size: 10px;">
-                ${serviceDisplay}
+                ${d.service || '-'}
               </span>
             </td>
             <td style="padding: 6px 4px; border: 1px solid #999;">
@@ -322,6 +273,7 @@ export const generateSimpleDonationsPDF = (donations: Donation[], title: string 
     </div>
   `;
   
+  // Portrait orientation for simple version too
   const opt = {
     margin: [0.4, 0.4, 0.4, 0.4] as [number, number, number, number],
     filename: `देणगी_यादी_${new Date().toISOString().split('T')[0]}.pdf`,
@@ -334,7 +286,7 @@ export const generateSimpleDonationsPDF = (donations: Donation[], title: string 
     jsPDF: { 
       unit: 'in' as const,
       format: 'a4' as const,
-      orientation: 'portrait' as const
+      orientation: 'portrait' as const // Changed to portrait
     }
   };
   
