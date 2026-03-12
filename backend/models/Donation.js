@@ -1,5 +1,3 @@
-// models/Donation.js - UPDATED VERSION
-
 const mongoose = require('mongoose');
 
 const donationSchema = new mongoose.Schema({
@@ -25,7 +23,10 @@ const donationSchema = new mongoose.Schema({
       return this.service === 'महाप्रसाद';
     }
   },
-  itemName: String,
+  // Store item name for reference (optional)
+  itemName: { 
+    type: String 
+  },
   // For Mahaprasad - quantity is required
   quantity: { 
     type: Number, 
@@ -36,7 +37,7 @@ const donationSchema = new mongoose.Schema({
   },
   unit: { 
     type: String,
-    enum: ['kg', 'piece', 'liter'],
+    enum: ['kg', 'gram', 'piece', 'liter'],  // ✅ Added 'gram' to enum
     required: function() {
       return this.service === 'महाप्रसाद';
     }
@@ -49,7 +50,10 @@ const donationSchema = new mongoose.Schema({
     },
     min: [1, 'रक्कम १ पेक्षा जास्त असावी']
   },
-  address: String,
+  address: {  // ✅ Added address field
+    type: String,
+    default: ''
+  },
   date: { 
     type: Date, 
     default: Date.now 

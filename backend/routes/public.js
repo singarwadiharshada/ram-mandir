@@ -3,10 +3,10 @@ const router = express.Router();
 const PrasadItem = require('../models/PrasadItem');
 const Donation = require('../models/Donation');
 
-// Get available items for public
+// Get available items for public with pagination
 router.get('/items', async (req, res) => {
   try {
-    const { category, search } = req.query;
+    const { category, search, page = 1, limit = 20 } = req.query;
     let query = {};
     
     if (category && category !== 'all') {
@@ -23,7 +23,21 @@ router.get('/items', async (req, res) => {
       $expr: { $lt: ['$received', '$required'] }
     }).sort({ name: 1 });
     
-    res.json(items);
+    // Manual pagination since we need to filter by remaining quantity
+    const startIndex = (parseInt(page) - 1) * parseInt(limit);
+    const endIndex = startIndex + parseInt(limit);
+    
+    // Get paginated items
+    const paginatedItems = items.slice(startIndex, endIndex);
+    
+    // Return paginated response
+    res.json({
+      items: paginatedItems,
+      total: items.length,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(items.length / parseInt(limit))
+    });
   } catch (error) {
     console.error('Error fetching public items:', error);
     res.status(500).json({ error: error.message });
@@ -33,6 +47,9 @@ router.get('/items', async (req, res) => {
 // Public donation endpoint (no auth)
 router.post('/donations', async (req, res) => {
   try {
+    console.log('=== PUBLIC DONATION REQUEST ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
     // Basic required fields for ALL donations
     if (!req.body.donorName || !req.body.mobile || !req.body.service) {
       return res.status(400).json({ 
@@ -68,6 +85,38 @@ router.post('/donations', async (req, res) => {
         });
       }
 
+      // Validate based on unit
+      if (item.unit === 'gram' && requestedQty < 50) {
+        return res.status(400).json({ 
+          error: 'ग्रॅमसाठी किमान प्रमाण ५० ग्रॅम आहे' 
+        });
+      }
+      
+      if (item.unit === 'kg' && requestedQty < 0.5) {
+        return res.status(400).json({ 
+          error: 'किलोसाठी किमान प्रमाण ०.५ किलो आहे' 
+        });
+      }
+
+      // Validate step values based on unit
+      if (item.unit === 'gram' && requestedQty % 50 !== 0) {
+        return res.status(400).json({ 
+          error: 'ग्रॅमसाठी प्रमाण ५० च्या पटीत असावे (उदा. ५०, १००, १५०)' 
+        });
+      }
+      
+      if (item.unit === 'kg' && (requestedQty * 2) % 1 !== 0) {
+        return res.status(400).json({ 
+          error: 'किलोसाठी प्रमाण ०.५ च्या पटीत असावे (उदा. ०.५, १.०, १.५)' 
+        });
+      }
+
+      if (item.unit === 'piece' && !Number.isInteger(requestedQty)) {
+        return res.status(400).json({ 
+          error: 'नगसाठी प्रमाण पूर्ण संख्या असावी (उदा. १, २, ३)' 
+        });
+      }
+
       const remaining = item.required - item.received;
       if (requestedQty > remaining) {
         return res.status(400).json({ 
@@ -75,22 +124,29 @@ router.post('/donations', async (req, res) => {
         });
       }
 
-      // IMPORTANT FIX: Don't include amount field at all for Mahaprasad
+      // IMPORTANT: Update the PrasadItem's received quantity first
+      item.received = Number((item.received + requestedQty).toFixed(3));
+      await item.save();
+      console.log(`Updated ${item.name} received quantity to ${item.received}`);
+
+      // Then create the donation
       const donationData = {
         donorName: req.body.donorName,
         mobile: req.body.mobile,
         service: req.body.service,
         item: item._id,
-        itemName: item.name,
+        itemName: item.name,  // Store for reference
         quantity: requestedQty,
         unit: item.unit,
         address: req.body.address || '',
         date: new Date()
-        // amount field is completely omitted
+        // amount field is completely omitted for Mahaprasad
       };
 
+      console.log('Creating donation with data:', donationData);
       const donation = await Donation.create(donationData);
       
+      console.log('Donation created successfully:', donation._id);
       res.status(201).json({ 
         message: 'देणगी यशस्वी',
         donationId: donation._id 
@@ -122,8 +178,10 @@ router.post('/donations', async (req, res) => {
         // item-related fields are omitted
       };
 
+      console.log('Creating donation with data:', donationData);
       const donation = await Donation.create(donationData);
       
+      console.log('Donation created successfully:', donation._id);
       res.status(201).json({ 
         message: 'देणगी यशस्वी',
         donationId: donation._id 
@@ -131,7 +189,19 @@ router.post('/donations', async (req, res) => {
     }
   } catch (error) {
     console.error('Public donation error:', error);
-    res.status(400).json({ error: error.message });
+    
+    // Handle duplicate key errors or other MongoDB errors
+    if (error.code === 11000) {
+      return res.status(400).json({ error: 'ही देणगी आधीच नोंदवली गेली आहे' });
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({ error: messages.join(', ') });
+    }
+    
+    res.status(500).json({ error: error.message });
   }
 });
 
