@@ -95,20 +95,20 @@ const DonationForm: React.FC = () => {
     };
   }, []);
 
-  // ============ UPDATED: Fetch services for dropdown when "इतर" is selected ============
+  // Fetch services for dropdown when "इतर" is selected
   const { data: servicesData, isLoading: servicesLoading, error: servicesError } = useQuery<Service[], Error>({
     queryKey: ['services', 'इतर'],
     queryFn: async () => {
       console.log('Fetching services for इतर category');
       
       try {
-        // Use the updated getServices method with category filter
-        const response = await api.getServices({ category: 'इतर' });
+        // You'll need to add this method to your api service
+        const response = await api.getServicesByCategory('इतर');
         
         console.log('Services API Response:', response);
         
         // Filter only active services
-        const activeServices = response.filter((service: Service) => service.isActive === true);
+        const activeServices = response.filter((service: Service) => service.isActive);
         
         return activeServices;
       } catch (error) {

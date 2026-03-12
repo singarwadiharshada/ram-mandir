@@ -478,8 +478,7 @@ class ApiService {
     }
   }
 
-  // ============ UPDATED SERVICE APIS ============
-  // Service APIs - Updated to use public endpoint
+  // Service APIs
   async getServices(params?: { 
     category?: string; 
     search?: string;
@@ -487,26 +486,18 @@ class ApiService {
     limit?: number;
   }): Promise<Service[]> {
     try {
-      console.log('📞 Fetching services with params:', params);
-      // Use the public services endpoint
-      const response = await this.api.get('/public/services', { params });
-      
-      // The public endpoint returns { items, total, page, etc. }
-      // Extract just the items array
-      return response.data.items || response.data;
+      return await this.api.get('/services', { params });
     } catch (error) {
       console.error('Failed to fetch services:', error);
       throw error;
     }
   }
 
-  // Updated to use the getServices method with category filter
+  // Add this method to get services by category
   async getServicesByCategory(category: string): Promise<Service[]> {
     try {
-      console.log(`📞 Fetching services for category: ${category}`);
-      // Use the existing getServices method with category filter
-      const services = await this.getServices({ category });
-      return services;
+      const response = await this.api.get(`/services/category/${category}`);
+      return response.data;
     } catch (error) {
       console.error(`Failed to fetch services for category ${category}:`, error);
       throw error;
@@ -549,74 +540,57 @@ class ApiService {
   }): Promise<PrasadItem[]> {
     try {
       console.log('📞 Calling getPublicItems with params:', params);
-      const response = await this.api.get('/public/items', { params });
-      return response.data.items || response.data;
+      return await this.api.get('/public/items', { params });
     } catch (error) {
       console.error('Failed to fetch public items:', error);
       throw error;
     }
   }
 
-  // Add this new method for public services
-  async getPublicServices(params?: {
-    category?: string;
-    search?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<Service[]> {
-    try {
-      console.log('📞 Calling getPublicServices with params:', params);
-      const response = await this.api.get('/public/services', { params });
-      // The public endpoint returns { items, total, page, etc. }
-      return response.data.items || response.data;
-    } catch (error) {
-      console.error('Failed to fetch public services:', error);
-      throw error;
-    }
-  }
+  // In your api.ts file, update the createPublicDonation method:
 
-  async createPublicDonation(donation: any): Promise<any> {
-    try {
-      console.log('📞 Calling createPublicDonation with data:', donation);
-      
-      // Validate data before sending
-      if (donation.service === 'महाप्रसाद') {
-        // Ensure no amount field for Mahaprasad
-        if (donation.amount) {
-          delete donation.amount;
-        }
-        
-        // Ensure required fields are present
-        if (!donation.item || !donation.quantity) {
-          throw new Error('Missing required fields for Mahaprasad donation');
-        }
-        
-        // Remove fields that are explicitly excluded by the API type
-        delete donation.itemName;
-        delete donation.unit;
-        delete donation._id;
-        delete donation.date;
-        
-      } else {
-        // Ensure no item fields for Abhishek/Other
-        delete donation.item;
-        delete donation.itemName;
-        delete donation.quantity;
-        delete donation.unit;
-        
-        // Ensure amount is present
-        if (!donation.amount) {
-          throw new Error('Missing amount for non-Mahaprasad donation');
-        }
+async createPublicDonation(donation: any): Promise<any> {
+  try {
+    console.log('📞 Calling createPublicDonation with data:', donation);
+    
+    // Validate data before sending
+    if (donation.service === 'महाप्रसाद') {
+      // Ensure no amount field for Mahaprasad
+      if (donation.amount) {
+        delete donation.amount;
       }
       
-      console.log('Final donation data being sent:', donation);
-      return await this.api.post('/public/donations', donation);
-    } catch (error) {
-      console.error('Failed to create public donation:', error);
-      throw error;
+      // Ensure required fields are present
+      if (!donation.item || !donation.quantity) {
+        throw new Error('Missing required fields for Mahaprasad donation');
+      }
+      
+      // Remove fields that are explicitly excluded by the API type
+      delete donation.itemName;
+      delete donation.unit;
+      delete donation._id;
+      delete donation.date;
+      
+    } else {
+      // Ensure no item fields for Abhishek/Other
+      delete donation.item;
+      delete donation.itemName;
+      delete donation.quantity;
+      delete donation.unit;
+      
+      // Ensure amount is present
+      if (!donation.amount) {
+        throw new Error('Missing amount for non-Mahaprasad donation');
+      }
     }
+    
+    console.log('Final donation data being sent:', donation);
+    return await this.api.post('/public/donations', donation);
+  } catch (error) {
+    console.error('Failed to create public donation:', error);
+    throw error;
   }
+}
 }
 // Create a single instance
 const apiService = new ApiService();
