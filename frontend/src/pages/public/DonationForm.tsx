@@ -14,6 +14,52 @@ interface PaginatedResponse<T> {
   totalPages?: number;
 }
 
+// Unit configuration helper
+const getUnitConfig = (unit: string) => {
+  switch (unit) {
+    case 'gram':
+      return { 
+        step: 50, 
+        min: 50, 
+        displayStep: 50,
+        formatValue: (val: number) => Math.round(val),
+        validateStep: (val: number) => Math.round(val / 50) * 50
+      };
+    case 'kg':
+      return { 
+        step: 0.5, 
+        min: 0.5, 
+        displayStep: 0.5,
+        formatValue: (val: number) => Number(val.toFixed(3)),
+        validateStep: (val: number) => Math.round(val / 0.5) * 0.5
+      };
+    case 'liter':
+      return { 
+        step: 0.5, 
+        min: 0.5, 
+        displayStep: 0.5,
+        formatValue: (val: number) => Number(val.toFixed(3)),
+        validateStep: (val: number) => Math.round(val / 0.5) * 0.5
+      };
+    case 'piece':
+      return { 
+        step: 1, 
+        min: 1, 
+        displayStep: 1,
+        formatValue: (val: number) => Math.floor(val),
+        validateStep: (val: number) => Math.floor(val)
+      };
+    default:
+      return { 
+        step: 0.5, 
+        min: 0.5, 
+        displayStep: 0.5,
+        formatValue: (val: number) => Number(val.toFixed(3)),
+        validateStep: (val: number) => val
+      };
+  }
+};
+
 const DonationForm: React.FC = () => {
   const [formData, setFormData] = useState({
     donorName: '',
@@ -112,8 +158,7 @@ const DonationForm: React.FC = () => {
     const link = document.createElement('a');
     
     // Path to your invitation image in the public folder
-    // Make sure to place your invitation image in the public folder with this name
-    link.href = '/images/Invitationcard.jpeg'; // or .png based on your file
+    link.href = '/images/Invitationcard.jpeg';
     
     // Set the download attribute with filename
     link.download = 'shri-ram-janmotsav-invitation.jpeg';
@@ -124,7 +169,34 @@ const DonationForm: React.FC = () => {
     document.body.removeChild(link);
     
     // Show success toast
-    showToast('आमंत्रण पत्रिका डाउनलोड होत आहे...', 'success');
+    showToast('निमंत्रण पत्रिका डाउनलोड होत आहे...', 'success');
+  };
+
+  // Validation function
+  const validateFormData = (data: typeof formData, selectedItem: PrasadItem | null): string | null => {
+    if (!data.donorName?.trim()) return 'देणगीदाराचे नाव आवश्यक आहे';
+    if (!data.mobile?.trim()) return 'मोबाईल नंबर आवश्यक आहे';
+    if (!/^\d{10}$/.test(data.mobile)) return 'मोबाईल नंबर १० अंकी असावा';
+    
+    if (data.service === 'महाप्रसाद') {
+      if (!data.item) return 'कृपया वस्तू निवडा';
+      if (!selectedItem) return 'कृपया वैध वस्तू निवडा';
+      if (!data.quantity || data.quantity <= 0) return 'कृपया वैध प्रमाण भरा';
+      
+      const maxAvailable = selectedItem.required - selectedItem.received;
+      if (data.quantity > maxAvailable) {
+        return `कृपया ${maxAvailable} ${selectedItem.unit} पेक्षा कमी प्रमाण निवडा`;
+      }
+    } else {
+      if (!data.amount || Number(data.amount) < 100) {
+        return 'कृपया किमान ₹१०० रक्कम भरा';
+      }
+      if (Number(data.amount) > 1000) {
+        return 'कृपया कमाल ₹१००० रक्कम भरा';
+      }
+    }
+    
+    return null; // No validation errors
   };
 
   // Create donation mutation with improved error handling
@@ -135,36 +207,49 @@ const DonationForm: React.FC = () => {
       // Find the selected item to get its details
       const selectedItemObj = items.find(i => i._id === data.item);
       
-      // Base object with required fields for all services
+      // Create a clean data object that matches what the API expects
+      // The API method Omit<Donation, '_id' | 'date' | 'itemName' | 'unit'>
+      // So we should NOT send: _id, date, itemName, unit
+      
       const donationData: any = {
-        donorName: data.donorName,
-        mobile: data.mobile,
+        donorName: data.donorName.trim(),
+        mobile: data.mobile.trim(),
         service: data.service,
-        address: data.address || '',
+        address: data.address.trim() || '',  // Address is allowed
       };
       
-      // Add service-specific fields based on the updated schema
+      // Add service-specific fields based on the service type
       if (data.service === 'महाप्रसाद') {
-        // For Mahaprasad: send item, quantity, unit, but NO amount
+        // For Mahaprasad: send item, quantity
+        // Note: itemName and unit are OMITTED by the API method
         donationData.item = data.item;
-        donationData.itemName = selectedItemObj?.name || '';
-        donationData.quantity = data.quantity;
-        donationData.unit = selectedItemObj?.unit || 'kg';
+        donationData.quantity = Number(data.quantity); // Ensure it's a number
         
-        // IMPORTANT: Explicitly remove amount field if it exists
-        delete donationData.amount;
+        // DO NOT send itemName or unit as they are explicitly excluded
+        // The server will look up the item to get these
+        
+        console.log('Mahaprasad donation data (without itemName/unit):', {
+          donorName: donationData.donorName,
+          mobile: donationData.mobile,
+          service: donationData.service,
+          address: donationData.address,
+          item: donationData.item,
+          quantity: donationData.quantity
+          // Note: itemName and unit are NOT included
+        });
+        
       } else {
-        // For Abhishek/Other: send amount, but NO item/quantity/unit
-        donationData.amount = parseInt(data.amount) || 0;
+        // For Abhishek/Other: send amount only
+        donationData.amount = Number(data.amount) || 0;
         
-        // IMPORTANT: Explicitly remove item-related fields if they exist
-        delete donationData.item;
-        delete donationData.itemName;
-        delete donationData.quantity;
-        delete donationData.unit;
+        console.log('Non-Mahaprasad donation data:', {
+          donorName: donationData.donorName,
+          mobile: donationData.mobile,
+          service: donationData.service,
+          address: donationData.address,
+          amount: donationData.amount
+        });
       }
-      
-      console.log('Processed donation data being sent:', JSON.stringify(donationData, null, 2));
       
       return api.createPublicDonation(donationData);
     },
@@ -217,14 +302,32 @@ const DonationForm: React.FC = () => {
     const selectedId = e.target.value;
     const item = items.find(i => i._id === selectedId);
     setSelectedItem(item || null);
-    setFormData({ ...formData, item: selectedId });
+    
+    // Set initial quantity based on unit
+    if (item) {
+      const config = getUnitConfig(item.unit);
+      setFormData({ ...formData, item: selectedId, quantity: config.min });
+    } else {
+      setFormData({ ...formData, item: selectedId });
+    }
   };
 
   const handleQuantityChange = (quantity: number) => {
     if (selectedItem) {
+      const config = getUnitConfig(selectedItem.unit);
       const maxAvailable = selectedItem.required - selectedItem.received;
-      const validQuantity = Math.min(Math.max(quantity, 0.5), maxAvailable);
-      console.log('Quantity changed to:', validQuantity);
+      
+      // Round to nearest valid step
+      let validQuantity = config.validateStep(quantity);
+      
+      // Ensure within bounds
+      validQuantity = Math.max(config.min, validQuantity);
+      validQuantity = Math.min(validQuantity, maxAvailable);
+      
+      // Format based on unit
+      validQuantity = config.formatValue(validQuantity);
+      
+      console.log('Quantity changed to:', validQuantity, selectedItem.unit);
       setFormData({ ...formData, quantity: validQuantity });
     }
   };
@@ -232,67 +335,30 @@ const DonationForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    try {
-      // Basic validation
-      if (!formData.donorName?.trim()) {
-        showToast('कृपया देणगीदाराचे नाव भरा', 'error');
-        return;
-      }
-
-      if (!formData.mobile?.trim()) {
-        showToast('कृपया मोबाईल नंबर भरा', 'error');
-        return;
-      }
-
-      if (!/^\d{10}$/.test(formData.mobile)) {
-        showToast('मोबाईल नंबर १० अंकी असावा', 'error');
-        return;
-      }
-
-      // Service-specific validation
-      if (formData.service === 'महाप्रसाद') {
-        if (!formData.item) {
-          showToast('कृपया वस्तू निवडा', 'error');
-          return;
-        }
-        
-        if (!selectedItem) {
-          showToast('कृपया वैध वस्तू निवडा', 'error');
-          return;
-        }
-
-        // Validate quantity doesn't exceed available
-        const maxAvailable = selectedItem.required - selectedItem.received;
-        if (formData.quantity > maxAvailable) {
-          showToast(`कृपया ${maxAvailable} ${selectedItem.unit} पेक्षा कमी प्रमाण निवडा`, 'error');
-          return;
-        }
-      } else {
-        // Abhishek/Other validation
-        if (!formData.amount || parseInt(formData.amount) < 1) {
-          showToast('कृपया वैध देणगी रक्कम भरा', 'error');
-          return;
-        }
-
-        // Amount range validation
-        const amount = parseInt(formData.amount);
-        if (amount < 100 || amount > 1000) {
-          showToast('कृपया रु.१०० ते रु.१००० दरम्यान रक्कम भरा', 'error');
-          return;
-        }
-      }
-
-      console.log('Form validation passed, submitting:', formData);
-      createMutation.mutate(formData);
-      
-    } catch (error) {
-      console.error('Form submission error:', error);
-      showToast('फॉर्म सबमिट करताना त्रुटी आली', 'error');
+    // Validate form before submitting
+    const validationError = validateFormData(formData, selectedItem);
+    if (validationError) {
+      showToast(validationError, 'error');
+      return;
     }
+
+    console.log('Form validation passed, submitting:', formData);
+    createMutation.mutate(formData);
   };
 
   const getRemaining = (item: PrasadItem) => {
     return (item.required - item.received).toFixed(3);
+  };
+
+  // Get unit display name in Marathi
+  const getUnitDisplay = (unit: string) => {
+    switch (unit) {
+      case 'kg': return 'किलो';
+      case 'gram': return 'ग्रॅम';
+      case 'liter': return 'लिटर';
+      case 'piece': return 'नग';
+      default: return unit;
+    }
   };
 
   // Pagination handlers
@@ -333,7 +399,7 @@ const DonationForm: React.FC = () => {
             title="आमंत्रण पत्रिका डाउनलोड करा"
           >
             <span className="invitation-icon">📥</span>
-            <span className="invitation-text">आमंत्रण पत्रिका</span>
+            <span className="invitation-text">निमंत्रण पत्रिका</span>
           </button>
           
           <a href="/login" className="login-btn">
@@ -345,7 +411,7 @@ const DonationForm: React.FC = () => {
       {/* Temple Information Container */}
       <div className="temple-info-container">
         <div className="temple-info-text">
-          <div>स्थापना - 1922. रजि नं A-9</div>
+          <div>स्थापना - 1922. रजि न A-9</div>
           <div>श्री राम मंदिर, शाहुपुरी 4 थी गल्ली, कोल्हापूर</div>
           <div>श्री राम जन्मोत्सव व महाप्रसाद</div>
           <div>19 मार्च 2026 ते 26 मार्च 2026</div>
@@ -442,7 +508,8 @@ const DonationForm: React.FC = () => {
                           value={item._id}
                           disabled={!available}
                         >
-                          {item.name} {!available ? '(पूर्ण)' : `(बाकी: ${remaining} ${item.unit})`}
+                          {item.name} - {getUnitDisplay(item.unit)} 
+                          {!available ? ' (पूर्ण)' : ` (बाकी: ${remaining} ${item.unit})`}
                         </option>
                       );
                     })}
@@ -483,6 +550,7 @@ const DonationForm: React.FC = () => {
               <div className="selected-item-info">
                 <div>
                   <strong>निवडलेली वस्तू:</strong> {selectedItem.name}
+                  <span className="unit-badge">{getUnitDisplay(selectedItem.unit)}</span>
                   <small>(बाकी: {getRemaining(selectedItem)} {selectedItem.unit})</small>
                 </div>
                 <button type="button" onClick={() => {
@@ -494,32 +562,45 @@ const DonationForm: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>प्रमाण ({selectedItem.unit}) *</label>
-                <div className="quantity-input">
-                  <button
-                    type="button"
-                    onClick={() => handleQuantityChange(formData.quantity - 0.5)}
-                    disabled={formData.quantity <= 0.5}
-                  >
-                    -
-                  </button>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0.5"
-                    max={selectedItem.required - selectedItem.received}
-                    value={formData.quantity}
-                    onChange={(e) => handleQuantityChange(parseFloat(e.target.value) || 0.5)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleQuantityChange(formData.quantity + 0.5)}
-                    disabled={formData.quantity >= (selectedItem.required - selectedItem.received)}
-                  >
-                    +
-                  </button>
-                </div>
+                <label>प्रमाण ({getUnitDisplay(selectedItem.unit)}) *</label>
+                {(() => {
+                  const config = getUnitConfig(selectedItem.unit);
+                  const maxAvailable = selectedItem.required - selectedItem.received;
+                  
+                  return (
+                    <div className="quantity-input">
+                      <button
+                        type="button"
+                        onClick={() => handleQuantityChange(formData.quantity - config.step)}
+                        disabled={formData.quantity <= config.min}
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        step={config.step}
+                        min={config.min}
+                        max={maxAvailable}
+                        value={formData.quantity}
+                        onChange={(e) => handleQuantityChange(parseFloat(e.target.value) || config.min)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleQuantityChange(formData.quantity + config.step)}
+                        disabled={formData.quantity >= maxAvailable}
+                      >
+                        +
+                      </button>
+                    </div>
+                  );
+                })()}
+                <small className="quantity-hint">
+                  किमान प्रमाण: {getUnitConfig(selectedItem.unit).min} {selectedItem.unit}
+                  {selectedItem.unit === 'gram' && ' (५० ग्रॅमच्या पटीत)'}
+                  {selectedItem.unit === 'kg' && ' (०.५ किलोच्या पटीत)'}
+                  {selectedItem.unit === 'piece' && ' (१ नगच्या पटीत)'}
+                </small>
               </div>
             </>
           )}
@@ -533,10 +614,11 @@ const DonationForm: React.FC = () => {
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 placeholder="उदा. 500"
-                min="1"
+                min="100"
+                max="1000"
                 required
               />
-              <small className="amount-hint">(रु.१०० ते रु.१००० दरम्यान रक्कम असावी)</small>
+              <small className="amount-hint">(₹१०० ते ₹१००० दरम्यान रक्कम असावी.)</small>
             </div>
           )}
 

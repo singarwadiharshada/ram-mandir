@@ -5,7 +5,6 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 class ApiService {
   private api: AxiosInstance;
-
   constructor() {
     this.api = axios.create({
       baseURL: API_URL,
@@ -537,17 +536,51 @@ class ApiService {
     }
   }
 
-  async createPublicDonation(donation: Omit<Donation, '_id' | 'date' | 'itemName' | 'unit'>): Promise<Donation> {
-    try {
-      console.log('📞 Calling createPublicDonation with data:', donation);
-      return await this.api.post('/public/donations', donation);
-    } catch (error) {
-      console.error('Failed to create public donation:', error);
-      throw error;
+  // In your api.ts file, update the createPublicDonation method:
+
+async createPublicDonation(donation: any): Promise<any> {
+  try {
+    console.log('📞 Calling createPublicDonation with data:', donation);
+    
+    // Validate data before sending
+    if (donation.service === 'महाप्रसाद') {
+      // Ensure no amount field for Mahaprasad
+      if (donation.amount) {
+        delete donation.amount;
+      }
+      
+      // Ensure required fields are present
+      if (!donation.item || !donation.quantity) {
+        throw new Error('Missing required fields for Mahaprasad donation');
+      }
+      
+      // Remove fields that are explicitly excluded by the API type
+      delete donation.itemName;
+      delete donation.unit;
+      delete donation._id;
+      delete donation.date;
+      
+    } else {
+      // Ensure no item fields for Abhishek/Other
+      delete donation.item;
+      delete donation.itemName;
+      delete donation.quantity;
+      delete donation.unit;
+      
+      // Ensure amount is present
+      if (!donation.amount) {
+        throw new Error('Missing amount for non-Mahaprasad donation');
+      }
     }
+    
+    console.log('Final donation data being sent:', donation);
+    return await this.api.post('/public/donations', donation);
+  } catch (error) {
+    console.error('Failed to create public donation:', error);
+    throw error;
   }
 }
-
+}
 // Create a single instance
 const apiService = new ApiService();
 

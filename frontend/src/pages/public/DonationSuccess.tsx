@@ -7,8 +7,8 @@ const DonationSuccess: React.FC = () => {
       <div className="overlay"></div>
       <div className="success-card">
         <div className="success-icon">✅</div>
-        <h1>देणगी यशस्वी!</h1>
-        <p>आपली देणगी यशस्वीरित्या नोंदवली गेली.</p>
+        <h1>नोंद यशस्वी!</h1>
+        <p>कृपया खाली दिलेल्या QR Code चा स्क्रीन शॉट कडून देणगी चे पेमेंट पूर्ण करून घ्यावे ही विनंती.</p>
         
         {/* Add the square image here */}
         <div className="qr-image-container">
