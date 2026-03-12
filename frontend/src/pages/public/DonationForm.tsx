@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '../../services/api';
-import { PrasadItem, ServiceCategory } from '../../types';
+import { PrasadItem, ServiceCategory, Service } from '../../types';
 import Toast from '../../components/Toast';
 import './DonationForm.css';
 
@@ -65,6 +65,7 @@ const DonationForm: React.FC = () => {
     donorName: '',
     mobile: '',
     service: 'महाप्रसाद' as ServiceCategory,
+    sevaId: '', // Store the selected service _id for "इतर" category
     item: '',
     quantity: 1,
     amount: '',
@@ -72,6 +73,7 @@ const DonationForm: React.FC = () => {
   });
 
   const [selectedItem, setSelectedItem] = useState<PrasadItem | null>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null); // For storing the selected service details
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
   
   // Audio ref
@@ -93,8 +95,46 @@ const DonationForm: React.FC = () => {
     };
   }, []);
 
+  // Fetch services for dropdown when "इतर" is selected - USING EXISTING getServices METHOD
+  const { data: servicesData, isLoading: servicesLoading, error: servicesError } = useQuery<Service[], Error>({
+    queryKey: ['services', 'इतर'],
+    queryFn: async () => {
+      console.log('Fetching services for इतर category');
+      
+      try {
+        // Use the existing getServices method with category filter
+        const response = await api.getServices({ 
+          category: 'इतर',
+          page: 1,
+          limit: 100 // Get all active services
+        });
+        
+        console.log('Services API Response:', response);
+        
+        // Handle both array and paginated response
+        let servicesArray: Service[] = [];
+        
+        if (Array.isArray(response)) {
+          servicesArray = response;
+        } else if (response && typeof response === 'object' && 'items' in response) {
+          servicesArray = (response as any).items || [];
+        }
+        
+        // Filter only active services
+        const activeServices = servicesArray.filter((service: Service) => service.isActive);
+        
+        console.log(`Found ${activeServices.length} active services`);
+        return activeServices;
+      } catch (error) {
+        console.error('Error fetching services:', error);
+        throw error;
+      }
+    },
+    enabled: formData.service === 'इतर' // Only fetch for "इतर" category
+  });
+
   // Fetch items for dropdown when service is महाप्रसाद
-  const { data: itemsData, isLoading, error } = useQuery<PrasadItem[], Error>({
+  const { data: itemsData, isLoading: itemsLoading, error: itemsError } = useQuery<PrasadItem[], Error>({
     queryKey: ['items', formData.service, currentPage, itemsPerPage],
     queryFn: async () => {
       console.log('Fetching items for dropdown:', formData.service);
@@ -107,7 +147,7 @@ const DonationForm: React.FC = () => {
           limit: itemsPerPage
         });
         
-        console.log('API Response received:', response);
+        console.log('Items API Response received:', response);
         
         // Handle both array and object response
         let itemsArray: PrasadItem[] = [];
@@ -142,6 +182,8 @@ const DonationForm: React.FC = () => {
   const totalItems = (itemsData as any)?.totalCount || items.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
+  const services = servicesData || [];
+
   // Function to play success audio
   const playSuccessAudio = () => {
     if (audioRef.current) {
@@ -173,7 +215,7 @@ const DonationForm: React.FC = () => {
   };
 
   // Validation function
-  const validateFormData = (data: typeof formData, selectedItem: PrasadItem | null): string | null => {
+  const validateFormData = (data: typeof formData, selectedItem: PrasadItem | null, selectedService: Service | null): string | null => {
     if (!data.donorName?.trim()) return 'देणगीदाराचे नाव आवश्यक आहे';
     if (!data.mobile?.trim()) return 'मोबाईल नंबर आवश्यक आहे';
     if (!/^\d{10}$/.test(data.mobile)) return 'मोबाईल नंबर १० अंकी असावा';
@@ -187,7 +229,20 @@ const DonationForm: React.FC = () => {
       if (data.quantity > maxAvailable) {
         return `कृपया ${maxAvailable} ${selectedItem.unit} पेक्षा कमी प्रमाण निवडा`;
       }
+    } else if (data.service === 'इतर') {
+      // For "इतर" category, validate selected service
+      if (!data.sevaId) return 'कृपया सेवा निवडा';
+      if (!selectedService) return 'कृपया वैध सेवा निवडा';
+      
+      const amount = Number(data.amount);
+      if (!amount || amount < selectedService.minAmount) {
+        return `कृपया किमान ₹${selectedService.minAmount} रक्कम भरा`;
+      }
+      if (selectedService.maxAmount && amount > selectedService.maxAmount) {
+        return `कृपया कमाल ₹${selectedService.maxAmount} रक्कम भरा`;
+      }
     } else {
+      // For अभिषेक
       if (!data.amount || Number(data.amount) < 100) {
         return 'कृपया किमान ₹१०० रक्कम भरा';
       }
@@ -205,9 +260,6 @@ const DonationForm: React.FC = () => {
       console.log('Submitting donation with data:', JSON.stringify(data, null, 2));
       
       // Create a clean data object that matches what the API expects
-      // The API method Omit<Donation, '_id' | 'date' | 'itemName' | 'unit'>
-      // So we should NOT send: _id, date, itemName, unit
-      
       const donationData: any = {
         donorName: data.donorName.trim(),
         mobile: data.mobile.trim(),
@@ -218,28 +270,37 @@ const DonationForm: React.FC = () => {
       // Add service-specific fields based on the service type
       if (data.service === 'महाप्रसाद') {
         // For Mahaprasad: send item, quantity
-        // Note: itemName and unit are OMITTED by the API method
         donationData.item = data.item;
         donationData.quantity = Number(data.quantity); // Ensure it's a number
         
-        // DO NOT send itemName or unit as they are explicitly excluded
-        // The server will look up the item to get these
-        
-        console.log('Mahaprasad donation data (without itemName/unit):', {
+        console.log('Mahaprasad donation data:', {
           donorName: donationData.donorName,
           mobile: donationData.mobile,
           service: donationData.service,
           address: donationData.address,
           item: donationData.item,
           quantity: donationData.quantity
-          // Note: itemName and unit are NOT included
+        });
+        
+      } else if (data.service === 'इतर') {
+        // For "इतर" category: send serviceId and amount
+        donationData.serviceId = data.sevaId; // Send the selected service _id
+        donationData.amount = Number(data.amount) || 0;
+        
+        console.log('Other category donation data:', {
+          donorName: donationData.donorName,
+          mobile: donationData.mobile,
+          service: donationData.service,
+          serviceId: donationData.serviceId,
+          address: donationData.address,
+          amount: donationData.amount
         });
         
       } else {
-        // For Abhishek/Other: send amount only
+        // For Abhishek: send amount only
         donationData.amount = Number(data.amount) || 0;
         
-        console.log('Non-Mahaprasad donation data:', {
+        console.log('Abhishek donation data:', {
           donorName: donationData.donorName,
           mobile: donationData.mobile,
           service: donationData.service,
@@ -260,12 +321,14 @@ const DonationForm: React.FC = () => {
         donorName: '',
         mobile: '',
         service: 'महाप्रसाद',
+        sevaId: '',
         item: '',
         quantity: 1,
         amount: '',
         address: ''
       });
       setSelectedItem(null);
+      setSelectedService(null);
       setCurrentPage(1);
       
       setTimeout(() => {
@@ -309,6 +372,18 @@ const DonationForm: React.FC = () => {
     }
   };
 
+  const handleServiceSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedId = e.target.value;
+    const service = services.find(s => s._id === selectedId);
+    setSelectedService(service || null);
+    
+    setFormData({ 
+      ...formData, 
+      sevaId: selectedId,
+      amount: service?.minAmount?.toString() || '' // Set default amount to minAmount
+    });
+  };
+
   const handleQuantityChange = (quantity: number) => {
     if (selectedItem) {
       const config = getUnitConfig(selectedItem.unit);
@@ -329,11 +404,15 @@ const DonationForm: React.FC = () => {
     }
   };
 
+  const handleAmountChange = (amount: string) => {
+    setFormData({ ...formData, amount });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate form before submitting
-    const validationError = validateFormData(formData, selectedItem);
+    const validationError = validateFormData(formData, selectedItem, selectedService);
     if (validationError) {
       showToast(validationError, 'error');
       return;
@@ -432,10 +511,12 @@ const DonationForm: React.FC = () => {
                 setFormData({ 
                   ...formData, 
                   service: e.target.value as ServiceCategory, 
+                  sevaId: '', // Reset sevaId when service changes
                   item: '',
                   amount: '' // Clear amount when switching services
                 });
                 setSelectedItem(null);
+                setSelectedService(null);
                 setCurrentPage(1);
               }}
               required
@@ -483,9 +564,9 @@ const DonationForm: React.FC = () => {
           {formData.service === 'महाप्रसाद' && (
             <div className="form-group">
               <label>वस्तू निवडा *</label>
-              {isLoading ? (
+              {itemsLoading ? (
                 <div className="loading">लोड करत आहे...</div>
-              ) : error ? (
+              ) : itemsError ? (
                 <div className="error-message">डेटा लोड करताना त्रुटी आली</div>
               ) : (
                 <>
@@ -602,14 +683,14 @@ const DonationForm: React.FC = () => {
             </>
           )}
 
-          {/* For Abhishek and Other - Show Amount Field */}
-          {formData.service !== 'महाप्रसाद' && (
+          {/* For Abhishek - Show Amount Field Only */}
+          {formData.service === 'अभिषेक' && (
             <div className="form-group">
               <label>देणगी रक्कम (₹) *</label>
               <input
                 type="number"
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                onChange={(e) => handleAmountChange(e.target.value)}
                 placeholder="उदा. 500"
                 min="100"
                 max="1000"
@@ -617,6 +698,60 @@ const DonationForm: React.FC = () => {
               />
               <small className="amount-hint">(₹५00 ते ₹१000 दरम्यान रक्कम असावी.)</small>
             </div>
+          )}
+
+          {/* For "इतर" Category - Show Seva Nivda (fetched from DB) and Amount Fields */}
+          {formData.service === 'इतर' && (
+            <>
+              <div className="form-group">
+                <label>सेवा निवडा *</label>
+                {servicesLoading ? (
+                  <div className="loading">सेवा लोड करत आहे...</div>
+                ) : servicesError ? (
+                  <div className="error-message">सेवा डेटा लोड करताना त्रुटी आली</div>
+                ) : services.length === 0 ? (
+                  <div className="error-message">सध्या कोणतीही सेवा उपलब्ध नाही</div>
+                ) : (
+                  <select
+                    value={formData.sevaId}
+                    onChange={handleServiceSelect}
+                    required
+                    className="service-select"
+                  >
+                    <option value="">-- सेवा निवडा --</option>
+                    {services.map((service) => (
+                      <option key={service._id} value={service._id}>
+                        {service.name} 
+                        {service.description && ` - ${service.description}`}
+                        {service.maxAmount 
+                          ? ` (₹${service.minAmount} - ₹${service.maxAmount})` 
+                          : ` (किमान ₹${service.minAmount})`}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {selectedService && (
+                <div className="form-group">
+                  <label>देणगी रक्कम (₹) *</label>
+                  <input
+                    type="number"
+                    value={formData.amount}
+                    onChange={(e) => handleAmountChange(e.target.value)}
+                    placeholder={`किमान ₹${selectedService.minAmount}`}
+                    min={selectedService.minAmount}
+                    max={selectedService.maxAmount || undefined}
+                    required
+                  />
+                  <small className="amount-hint">
+                    {selectedService.maxAmount 
+                      ? `(₹${selectedService.minAmount} ते ₹${selectedService.maxAmount} दरम्यान रक्कम असावी.)` 
+                      : `(किमान ₹${selectedService.minAmount} रक्कम असावी.)`}
+                  </small>
+                </div>
+              )}
+            </>
           )}
 
           <button 
