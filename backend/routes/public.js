@@ -4,6 +4,7 @@ const PrasadItem = require('../models/PrasadItem');
 const Donation = require('../models/Donation');
 const Service = require('../models/Service'); // Add this import
 
+
 // Get available items for public with pagination
 router.get('/items', async (req, res) => {
   try {
@@ -111,7 +112,7 @@ router.get('/services/:id', async (req, res) => {
   }
 });
 
-// Public donation endpoint (no auth)
+// Public donation endpoint (no auth) - UPDATED to return full donation object
 router.post('/donations', async (req, res) => {
   try {
     console.log('=== PUBLIC DONATION REQUEST ===');
@@ -130,6 +131,14 @@ router.post('/donations', async (req, res) => {
         error: 'मोबाईल नंबर १० अंकी असावा' 
       });
     }
+
+    let donationData = {
+      donorName: req.body.donorName,
+      mobile: req.body.mobile,
+      service: req.body.service,
+      address: req.body.address || '',
+      date: new Date()
+    };
 
     // Service-specific validation
     if (req.body.service === 'महाप्रसाद') {
@@ -196,62 +205,78 @@ router.post('/donations', async (req, res) => {
       await item.save();
       console.log(`Updated ${item.name} received quantity to ${item.received}`);
 
-      // Then create the donation
-      const donationData = {
-        donorName: req.body.donorName,
-        mobile: req.body.mobile,
-        service: req.body.service,
-        item: item._id,
-        itemName: item.name,
-        quantity: requestedQty,
-        unit: item.unit,
-        address: req.body.address || '',
-        date: new Date()
-      };
+      donationData.item = item._id;
+      donationData.itemName = item.name;
+      donationData.quantity = requestedQty;
+      donationData.unit = item.unit;
+      donationData.amount = 0; // Mahaprasad has amount 0
 
-      console.log('Creating donation with data:', donationData);
-      const donation = await Donation.create(donationData);
-      
-      console.log('Donation created successfully:', donation._id);
-      res.status(201).json({ 
-        message: 'देणगी यशस्वी',
-        donationId: donation._id 
-      });
-
-    } else {
-      // Abhishek/Other - requires amount but NOT item
-      if (!req.body.amount) {
+    } else if (req.body.service === 'इतर') {
+      // "इतर" category validation
+      if (!req.body.sevaId) {
         return res.status(400).json({ 
-          error: 'कृपया देणगी रक्कम भरा' 
+          error: 'कृपया सेवा निवडा' 
         });
+      }
+
+      const service = await Service.findById(req.body.sevaId);
+      if (!service) {
+        return res.status(404).json({ error: 'सेवा सापडली नाही' });
       }
 
       const amount = parseFloat(req.body.amount);
-      if (isNaN(amount) || amount < 100 || amount > 1000) {
+      if (isNaN(amount) || amount < service.minAmount) {
         return res.status(400).json({ 
-          error: 'कृपया रु.१०० ते रु.१००० दरम्यान रक्कम भरा' 
+          error: `कृपया किमान ₹${service.minAmount} रक्कम भरा` 
         });
       }
 
-      // For Abhishek/Other, create donation with amount
-      const donationData = {
-        donorName: req.body.donorName,
-        mobile: req.body.mobile,
-        service: req.body.service,
-        amount: amount,
-        address: req.body.address || '',
-        date: new Date()
-      };
+      if (service.maxAmount && amount > service.maxAmount) {
+        return res.status(400).json({ 
+          error: `कृपया कमाल ₹${service.maxAmount} रक्कम भरा` 
+        });
+      }
 
-      console.log('Creating donation with data:', donationData);
-      const donation = await Donation.create(donationData);
-      
-      console.log('Donation created successfully:', donation._id);
-      res.status(201).json({ 
-        message: 'देणगी यशस्वी',
-        donationId: donation._id 
-      });
+      donationData.sevaId = service._id;
+      donationData.serviceName = service.name;
+      donationData.amount = amount;
+
+    } else if (req.body.service === 'अभिषेक') {
+      // Abhishek validation
+      const amount = parseFloat(req.body.amount);
+      if (isNaN(amount) || amount < 100 || amount > 1000) {
+        return res.status(400).json({ 
+          error: 'कृपया ₹१०० ते ₹१००० दरम्यान रक्कम भरा' 
+        });
+      }
+      donationData.amount = amount;
     }
+
+    console.log('Creating donation with data:', donationData);
+    const donation = await Donation.create(donationData);
+    
+    // Populate references for response
+    let populatedDonation;
+    if (donation.service === 'महाप्रसाद') {
+      populatedDonation = await Donation.findById(donation._id)
+        .populate('item')
+        .lean();
+    } else if (donation.service === 'इतर') {
+      populatedDonation = await Donation.findById(donation._id)
+        .populate('sevaId')
+        .lean();
+      if (populatedDonation && populatedDonation.sevaId) {
+        populatedDonation.serviceName = populatedDonation.sevaId.name;
+      }
+    } else {
+      populatedDonation = donation.toObject();
+    }
+    
+    console.log('Donation created successfully:', donation._id);
+    
+    // Return the full donation object (not just message and ID)
+    res.status(201).json(populatedDonation || donation);
+
   } catch (error) {
     console.error('Public donation error:', error);
     
