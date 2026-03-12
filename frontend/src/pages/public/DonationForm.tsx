@@ -204,9 +204,6 @@ const DonationForm: React.FC = () => {
     mutationFn: (data: typeof formData) => {
       console.log('Submitting donation with data:', JSON.stringify(data, null, 2));
       
-      // Find the selected item to get its details
-      const selectedItemObj = items.find(i => i._id === data.item);
-      
       // Create a clean data object that matches what the API expects
       // The API method Omit<Donation, '_id' | 'date' | 'itemName' | 'unit'>
       // So we should NOT send: _id, date, itemName, unit
