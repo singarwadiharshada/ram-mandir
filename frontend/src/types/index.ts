@@ -18,13 +18,20 @@ export interface Donation {
   donorName: string;
   mobile: string;
   service: ServiceCategory;
-  item: string | PrasadItem;
-  itemName: string;
-  quantity: number;
-  unit: UnitType;
+  // For Mahaprasad
+  item?: string | PrasadItem;  // Item ID or populated item
+  itemName?: string;           // Populated item name
+  quantity?: number;
+  unit?: UnitType;
+  // For "इतर" category
+  sevaId?: string;             // Service ID for "इतर" category
+  serviceName?: string;        // Populated service name for "इतर" category
+  // For all categories with amount
   amount: number;
   address?: string;
   date: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Service {
@@ -35,6 +42,8 @@ export interface Service {
   maxAmount?: number;
   description?: string;
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Admin {
