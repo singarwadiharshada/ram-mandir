@@ -5,6 +5,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 class ApiService {
   private api: AxiosInstance;
+
   constructor() {
     this.api = axios.create({
       baseURL: API_URL,
@@ -493,17 +494,6 @@ class ApiService {
     }
   }
 
-  // Add this method to get services by category
-  async getServicesByCategory(category: string): Promise<Service[]> {
-    try {
-      const response = await this.api.get(`/services/category/${category}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Failed to fetch services for category ${category}:`, error);
-      throw error;
-    }
-  }
-
   async createService(service: Omit<Service, '_id' | 'createdAt' | 'updatedAt'>): Promise<Service> {
     try {
       return await this.api.post('/services', service);
@@ -547,53 +537,45 @@ class ApiService {
     }
   }
 
-  // In your api.ts file, update the createPublicDonation method:
-
-async createPublicDonation(donation: any): Promise<any> {
-  try {
-    console.log('📞 Calling createPublicDonation with data:', donation);
-    
-    // Validate data before sending
-    if (donation.service === 'महाप्रसाद') {
-      // Ensure no amount field for Mahaprasad
-      if (donation.amount) {
-        delete donation.amount;
-      }
-      
-      // Ensure required fields are present
-      if (!donation.item || !donation.quantity) {
-        throw new Error('Missing required fields for Mahaprasad donation');
-      }
-      
-      // Remove fields that are explicitly excluded by the API type
-      delete donation.itemName;
-      delete donation.unit;
-      delete donation._id;
-      delete donation.date;
-      
-    } else {
-      // Ensure no item fields for Abhishek/Other
-      delete donation.item;
-      delete donation.itemName;
-      delete donation.quantity;
-      delete donation.unit;
-      
-      // Ensure amount is present
-      if (!donation.amount) {
-        throw new Error('Missing amount for non-Mahaprasad donation');
-      }
+  // NEW: Public Services endpoints
+  async getPublicServices(params?: { 
+    category?: string; 
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<Service[]> {
+    try {
+      console.log('📞 Calling getPublicServices with params:', params);
+      return await this.api.get('/public/services', { params });
+    } catch (error) {
+      console.error('Failed to fetch public services:', error);
+      throw error;
     }
-    
-    console.log('Final donation data being sent:', donation);
-    return await this.api.post('/public/donations', donation);
-  } catch (error) {
-    console.error('Failed to create public donation:', error);
-    throw error;
+  }
+
+  async getPublicServiceById(id: string): Promise<Service> {
+    try {
+      console.log('📞 Calling getPublicServiceById with id:', id);
+      return await this.api.get(`/public/services/${id}`);
+    } catch (error) {
+      console.error('Failed to fetch public service:', error);
+      throw error;
+    }
+  }
+
+  async createPublicDonation(donation: Omit<Donation, '_id' | 'date' | 'itemName' | 'unit'>): Promise<Donation> {
+    try {
+      console.log('📞 Calling createPublicDonation with data:', donation);
+      return await this.api.post('/public/donations', donation);
+    } catch (error) {
+      console.error('Failed to create public donation:', error);
+      throw error;
+    }
   }
 }
-}
+
 // Create a single instance
 const apiService = new ApiService();
 
-// Export the instance as default
+// Export only the instance as default
 export default apiService;

@@ -75,7 +75,7 @@ const DonationForm: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<PrasadItem | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null); // For storing the selected service details
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
-  
+
   // Audio ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -86,7 +86,7 @@ const DonationForm: React.FC = () => {
   // Initialize audio
   useEffect(() => {
     audioRef.current = new Audio('/sounds/jai-shree-ram.mp3');
-    
+
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -96,35 +96,49 @@ const DonationForm: React.FC = () => {
   }, []);
 
   // Fetch services for dropdown when "इतर" is selected
-  const { data: servicesData, isLoading: servicesLoading, error: servicesError } = useQuery<Service[], Error>({
-    queryKey: ['services', 'इतर'],
-    queryFn: async () => {
-      console.log('Fetching services for इतर category');
+// Fetch services for dropdown when "इतर" is selected - USING PUBLIC ENDPOINT NOW
+const { data: servicesData, isLoading: servicesLoading, error: servicesError } = useQuery<Service[], Error>({
+  queryKey: ['public-services', 'इतर'],
+  queryFn: async () => {
+    console.log('Fetching public services for इतर category');
+    
+    try {
+      // Use the public endpoint instead of the protected one
+      const response = await api.getPublicServices({ 
+        category: 'इतर',
+        page: 1,
+        limit: 100 // Get all active services
+      });
       
-      try {
-        // You'll need to add this method to your api service
-        const response = await api.getServicesByCategory('इतर');
-        
-        console.log('Services API Response:', response);
-        
-        // Filter only active services
-        const activeServices = response.filter((service: Service) => service.isActive);
-        
-        return activeServices;
-      } catch (error) {
-        console.error('Error fetching services:', error);
-        throw error;
+      console.log('Services API Response:', response);
+      
+      // Handle both array and paginated response
+      let servicesArray: Service[] = [];
+      
+      if (Array.isArray(response)) {
+        servicesArray = response;
+      } else if (response && typeof response === 'object' && 'items' in response) {
+        servicesArray = (response as any).items || [];
       }
-    },
-    enabled: formData.service === 'इतर' // Only fetch for "इतर" category
-  });
-
+      
+      // Filter only active services (though backend already does this)
+      const activeServices = servicesArray.filter((service: Service) => service.isActive);
+      
+      console.log(`Found ${activeServices.length} active services`);
+      return activeServices;
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      throw error;
+    }
+  },
+  enabled: formData.service === 'इतर' // Only fetch for "इतर" category
+});
   // Fetch items for dropdown when service is महाप्रसाद
   const { data: itemsData, isLoading: itemsLoading, error: itemsError } = useQuery<PrasadItem[], Error>({
     queryKey: ['items', formData.service, currentPage, itemsPerPage],
     queryFn: async () => {
       console.log('Fetching items for dropdown:', formData.service);
-      
+
       try {
         const response = await api.getPublicItems({ 
           category: formData.service, 
@@ -132,13 +146,13 @@ const DonationForm: React.FC = () => {
           page: currentPage,
           limit: itemsPerPage
         });
-        
-        console.log('Items API Response received:', response);
-        
+
+        console.log('API Response received:', response);
+
         // Handle both array and object response
         let itemsArray: PrasadItem[] = [];
         let totalCount = 0;
-        
+
         if (Array.isArray(response)) {
           itemsArray = response;
           totalCount = response.length;
@@ -150,11 +164,11 @@ const DonationForm: React.FC = () => {
           totalCount = paginatedResponse.total || itemsArray.length;
           console.log(`Found ${itemsArray.length} items (object response). Total: ${totalCount}`);
         }
-        
+
         // Create a new array with the totalCount property
         const result = [...itemsArray];
         (result as any).totalCount = totalCount;
-        
+
         return result;
       } catch (error) {
         console.error('Error fetching items:', error);
@@ -184,18 +198,18 @@ const DonationForm: React.FC = () => {
   const downloadInvitation = () => {
     // Create a link element
     const link = document.createElement('a');
-    
+
     // Path to your invitation image in the public folder
     link.href = '/images/Invitationcard.jpeg';
-    
+
     // Set the download attribute with filename
     link.download = 'shri-ram-janmotsav-invitation.jpeg';
-    
+
     // Append to body, click and remove
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     // Show success toast
     showToast('निमंत्रण पत्रिका डाउनलोड होत आहे...', 'success');
   };
@@ -205,12 +219,12 @@ const DonationForm: React.FC = () => {
     if (!data.donorName?.trim()) return 'देणगीदाराचे नाव आवश्यक आहे';
     if (!data.mobile?.trim()) return 'मोबाईल नंबर आवश्यक आहे';
     if (!/^\d{10}$/.test(data.mobile)) return 'मोबाईल नंबर १० अंकी असावा';
-    
+
     if (data.service === 'महाप्रसाद') {
       if (!data.item) return 'कृपया वस्तू निवडा';
       if (!selectedItem) return 'कृपया वैध वस्तू निवडा';
       if (!data.quantity || data.quantity <= 0) return 'कृपया वैध प्रमाण भरा';
-      
+
       const maxAvailable = selectedItem.required - selectedItem.received;
       if (data.quantity > maxAvailable) {
         return `कृपया ${maxAvailable} ${selectedItem.unit} पेक्षा कमी प्रमाण निवडा`;
@@ -236,7 +250,7 @@ const DonationForm: React.FC = () => {
         return 'कृपया कमाल ₹१००० रक्कम भरा';
       }
     }
-    
+
     return null; // No validation errors
   };
 
@@ -244,7 +258,7 @@ const DonationForm: React.FC = () => {
   const createMutation = useMutation({
     mutationFn: (data: typeof formData) => {
       console.log('Submitting donation with data:', JSON.stringify(data, null, 2));
-      
+
       // Create a clean data object that matches what the API expects
       const donationData: any = {
         donorName: data.donorName.trim(),
@@ -252,14 +266,14 @@ const DonationForm: React.FC = () => {
         service: data.service,
         address: data.address.trim() || '',  // Address is allowed
       };
-      
+
       // Add service-specific fields based on the service type
       if (data.service === 'महाप्रसाद') {
         // For Mahaprasad: send item, quantity
         donationData.item = data.item;
         donationData.quantity = Number(data.quantity); // Ensure it's a number
-        
-        console.log('Mahaprasad donation data:', {
+
+        console.log('Mahaprasad donation data (without itemName/unit):', {
           donorName: donationData.donorName,
           mobile: donationData.mobile,
           service: donationData.service,
@@ -281,11 +295,11 @@ const DonationForm: React.FC = () => {
           address: donationData.address,
           amount: donationData.amount
         });
-        
+
       } else {
         // For Abhishek: send amount only
         donationData.amount = Number(data.amount) || 0;
-        
+
         console.log('Abhishek donation data:', {
           donorName: donationData.donorName,
           mobile: donationData.mobile,
@@ -294,15 +308,15 @@ const DonationForm: React.FC = () => {
           amount: donationData.amount
         });
       }
-      
+
       return api.createPublicDonation(donationData);
     },
     onSuccess: (response) => {
       console.log('Donation successful:', response);
       playSuccessAudio();
-      
+
       showToast('देणगी यशस्वीरित्या नोंदवली गेली! जय श्री राम! 🙏', 'success');
-      
+
       setFormData({
         donorName: '',
         mobile: '',
@@ -316,7 +330,7 @@ const DonationForm: React.FC = () => {
       setSelectedItem(null);
       setSelectedService(null);
       setCurrentPage(1);
-      
+
       setTimeout(() => {
         window.location.href = '/donation-success';
       }, 2000);
@@ -324,9 +338,9 @@ const DonationForm: React.FC = () => {
     onError: (error: any) => {
       console.error('Full error object:', error);
       console.error('Error response data:', error.response?.data);
-      
+
       let errorMessage = 'काहीतरी चूक झाली. कृपया पुन्हा प्रयत्न करा.';
-      
+
       if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
       } else if (error.response?.data?.message) {
@@ -334,7 +348,7 @@ const DonationForm: React.FC = () => {
       } else if (error.code === 'ERR_NETWORK') {
         errorMessage = 'सर्व्हरशी संपर्क साधता आला नाही. कृपया नेटवर्क तपासा.';
       }
-      
+
       showToast(errorMessage, 'error');
     }
   });
@@ -348,7 +362,7 @@ const DonationForm: React.FC = () => {
     const selectedId = e.target.value;
     const item = items.find(i => i._id === selectedId);
     setSelectedItem(item || null);
-    
+
     // Set initial quantity based on unit
     if (item) {
       const config = getUnitConfig(item.unit);
@@ -374,17 +388,17 @@ const DonationForm: React.FC = () => {
     if (selectedItem) {
       const config = getUnitConfig(selectedItem.unit);
       const maxAvailable = selectedItem.required - selectedItem.received;
-      
+
       // Round to nearest valid step
       let validQuantity = config.validateStep(quantity);
-      
+
       // Ensure within bounds
       validQuantity = Math.max(config.min, validQuantity);
       validQuantity = Math.min(validQuantity, maxAvailable);
-      
+
       // Format based on unit
       validQuantity = config.formatValue(validQuantity);
-      
+
       console.log('Quantity changed to:', validQuantity, selectedItem.unit);
       setFormData({ ...formData, quantity: validQuantity });
     }
@@ -447,12 +461,12 @@ const DonationForm: React.FC = () => {
             className="temple-logo"
           />
         </div>
-        
+
         <div className="header-content">
           <h1 className="main-title">श्री राम मंदिर, शाहूपुरी, कोल्हापूर</h1>
           <h2 className="festival-title">श्री राम जन्मोत्सव २०२६</h2>
         </div>
-        
+
         {/* Invitation Download Button and Login */}
         <div className="header-actions">
           <button 
@@ -463,7 +477,7 @@ const DonationForm: React.FC = () => {
             <span className="invitation-icon">📥</span>
             <span className="invitation-text">निमंत्रण पत्रिका</span>
           </button>
-          
+
           <a href="/login" className="login-btn">
             <span className="login-icon">लॉग इन</span>
           </a>
@@ -630,7 +644,7 @@ const DonationForm: React.FC = () => {
                 {(() => {
                   const config = getUnitConfig(selectedItem.unit);
                   const maxAvailable = selectedItem.required - selectedItem.received;
-                  
+
                   return (
                     <div className="quantity-input">
                       <button
@@ -682,7 +696,7 @@ const DonationForm: React.FC = () => {
                 max="1000"
                 required
               />
-              <small className="amount-hint">(₹५00 ते ₹१000 दरम्यान रक्कम असावी.)</small>
+              <small className="amount-hint">(₹१०० ते ₹१००० दरम्यान रक्कम असावी.)</small>
             </div>
           )}
 
