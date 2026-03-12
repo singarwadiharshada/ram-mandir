@@ -95,35 +95,21 @@ const DonationForm: React.FC = () => {
     };
   }, []);
 
-  // Fetch services for dropdown when "इतर" is selected - USING EXISTING getServices METHOD
+  // ============ UPDATED: Fetch services for dropdown when "इतर" is selected ============
   const { data: servicesData, isLoading: servicesLoading, error: servicesError } = useQuery<Service[], Error>({
     queryKey: ['services', 'इतर'],
     queryFn: async () => {
       console.log('Fetching services for इतर category');
       
       try {
-        // Use the existing getServices method with category filter
-        const response = await api.getServices({ 
-          category: 'इतर',
-          page: 1,
-          limit: 100 // Get all active services
-        });
+        // Use the updated getServices method with category filter
+        const response = await api.getServices({ category: 'इतर' });
         
         console.log('Services API Response:', response);
         
-        // Handle both array and paginated response
-        let servicesArray: Service[] = [];
-        
-        if (Array.isArray(response)) {
-          servicesArray = response;
-        } else if (response && typeof response === 'object' && 'items' in response) {
-          servicesArray = (response as any).items || [];
-        }
-        
         // Filter only active services
-        const activeServices = servicesArray.filter((service: Service) => service.isActive);
+        const activeServices = response.filter((service: Service) => service.isActive === true);
         
-        console.log(`Found ${activeServices.length} active services`);
         return activeServices;
       } catch (error) {
         console.error('Error fetching services:', error);
