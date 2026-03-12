@@ -96,43 +96,43 @@ const DonationForm: React.FC = () => {
   }, []);
 
   // Fetch services for dropdown when "इतर" is selected
-// Fetch services for dropdown when "इतर" is selected - USING PUBLIC ENDPOINT NOW
-const { data: servicesData, isLoading: servicesLoading, error: servicesError } = useQuery<Service[], Error>({
-  queryKey: ['public-services', 'इतर'],
-  queryFn: async () => {
-    console.log('Fetching public services for इतर category');
-    
-    try {
-      // Use the public endpoint instead of the protected one
-      const response = await api.getPublicServices({ 
-        category: 'इतर',
-        page: 1,
-        limit: 100 // Get all active services
-      });
+  const { data: servicesData, isLoading: servicesLoading, error: servicesError } = useQuery<Service[], Error>({
+    queryKey: ['public-services', 'इतर'],
+    queryFn: async () => {
+      console.log('Fetching public services for इतर category');
       
-      console.log('Services API Response:', response);
-      
-      // Handle both array and paginated response
-      let servicesArray: Service[] = [];
-      
-      if (Array.isArray(response)) {
-        servicesArray = response;
-      } else if (response && typeof response === 'object' && 'items' in response) {
-        servicesArray = (response as any).items || [];
+      try {
+        // Use the public endpoint instead of the protected one
+        const response = await api.getPublicServices({ 
+          category: 'इतर',
+          page: 1,
+          limit: 100 // Get all active services
+        });
+        
+        console.log('Services API Response:', response);
+        
+        // Handle both array and paginated response
+        let servicesArray: Service[] = [];
+        
+        if (Array.isArray(response)) {
+          servicesArray = response;
+        } else if (response && typeof response === 'object' && 'items' in response) {
+          servicesArray = (response as any).items || [];
+        }
+        
+        // Filter only active services (though backend already does this)
+        const activeServices = servicesArray.filter((service: Service) => service.isActive);
+        
+        console.log(`Found ${activeServices.length} active services`);
+        return activeServices;
+      } catch (error) {
+        console.error('Error fetching services:', error);
+        throw error;
       }
-      
-      // Filter only active services (though backend already does this)
-      const activeServices = servicesArray.filter((service: Service) => service.isActive);
-      
-      console.log(`Found ${activeServices.length} active services`);
-      return activeServices;
-    } catch (error) {
-      console.error('Error fetching services:', error);
-      throw error;
-    }
-  },
-  enabled: formData.service === 'इतर' // Only fetch for "इतर" category
-});
+    },
+    enabled: formData.service === 'इतर' // Only fetch for "इतर" category
+  });
+
   // Fetch items for dropdown when service is महाप्रसाद
   const { data: itemsData, isLoading: itemsLoading, error: itemsError } = useQuery<PrasadItem[], Error>({
     queryKey: ['items', formData.service, currentPage, itemsPerPage],
@@ -273,7 +273,7 @@ const { data: servicesData, isLoading: servicesLoading, error: servicesError } =
         donationData.item = data.item;
         donationData.quantity = Number(data.quantity); // Ensure it's a number
 
-        console.log('Mahaprasad donation data (without itemName/unit):', {
+        console.log('Mahaprasad donation data:', {
           donorName: donationData.donorName,
           mobile: donationData.mobile,
           service: donationData.service,
@@ -283,15 +283,15 @@ const { data: servicesData, isLoading: servicesLoading, error: servicesError } =
         });
         
       } else if (data.service === 'इतर') {
-        // For "इतर" category: send serviceId and amount
-        donationData.serviceId = data.sevaId; // Send the selected service _id
+        // For "इतर" category: send sevaId (not serviceId) and amount - FIXED HERE
+        donationData.sevaId = data.sevaId; // Changed from serviceId to sevaId
         donationData.amount = Number(data.amount) || 0;
         
         console.log('Other category donation data:', {
           donorName: donationData.donorName,
           mobile: donationData.mobile,
           service: donationData.service,
-          serviceId: donationData.serviceId,
+          sevaId: donationData.sevaId, // Changed from serviceId to sevaId
           address: donationData.address,
           amount: donationData.amount
         });
