@@ -73,7 +73,7 @@ const DonationForm: React.FC = () => {
   });
 
   const [selectedItem, setSelectedItem] = useState<PrasadItem | null>(null);
-  const [selectedService, setSelectedService] = useState<Service | null>(null); // For storing the selected service details
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
 
   // Audio ref
@@ -102,16 +102,14 @@ const DonationForm: React.FC = () => {
       console.log('Fetching public services for इतर category');
       
       try {
-        // Use the public endpoint instead of the protected one
         const response = await api.getPublicServices({ 
           category: 'इतर',
           page: 1,
-          limit: 100 // Get all active services
+          limit: 100
         });
         
         console.log('Services API Response:', response);
         
-        // Handle both array and paginated response
         let servicesArray: Service[] = [];
         
         if (Array.isArray(response)) {
@@ -120,7 +118,6 @@ const DonationForm: React.FC = () => {
           servicesArray = (response as any).items || [];
         }
         
-        // Filter only active services (though backend already does this)
         const activeServices = servicesArray.filter((service: Service) => service.isActive);
         
         console.log(`Found ${activeServices.length} active services`);
@@ -130,7 +127,7 @@ const DonationForm: React.FC = () => {
         throw error;
       }
     },
-    enabled: formData.service === 'इतर' // Only fetch for "इतर" category
+    enabled: formData.service === 'इतर'
   });
 
   // Fetch items for dropdown when service is महाप्रसाद
@@ -149,7 +146,6 @@ const DonationForm: React.FC = () => {
 
         console.log('API Response received:', response);
 
-        // Handle both array and object response
         let itemsArray: PrasadItem[] = [];
         let totalCount = 0;
 
@@ -158,14 +154,12 @@ const DonationForm: React.FC = () => {
           totalCount = response.length;
           console.log(`Found ${itemsArray.length} items (array response)`);
         } else if (response && typeof response === 'object') {
-          // Properly type the response as PaginatedResponse
           const paginatedResponse = response as PaginatedResponse<PrasadItem>;
           itemsArray = paginatedResponse.items || [];
           totalCount = paginatedResponse.total || itemsArray.length;
           console.log(`Found ${itemsArray.length} items (object response). Total: ${totalCount}`);
         }
 
-        // Create a new array with the totalCount property
         const result = [...itemsArray];
         (result as any).totalCount = totalCount;
 
@@ -175,7 +169,7 @@ const DonationForm: React.FC = () => {
         throw error;
       }
     },
-    enabled: formData.service === 'महाप्रसाद' // Only fetch for mahaprasad
+    enabled: formData.service === 'महाप्रसाद'
   });
 
   const items = itemsData || [];
@@ -196,43 +190,53 @@ const DonationForm: React.FC = () => {
 
   // Function to download invitation image
   const downloadInvitation = () => {
-    // Create a link element
     const link = document.createElement('a');
-
-    // Path to your invitation image in the public folder
     link.href = '/images/Invitationcard.jpeg';
-
-    // Set the download attribute with filename
     link.download = 'shri-ram-janmotsav-invitation.jpeg';
-
-    // Append to body, click and remove
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    // Show success toast
     showToast('निमंत्रण पत्रिका डाउनलोड होत आहे...', 'success');
   };
 
   // Validation function
   const validateFormData = (data: typeof formData, selectedItem: PrasadItem | null, selectedService: Service | null): string | null => {
-    if (!data.donorName?.trim()) return 'देणगीदाराचे नाव आवश्यक आहे';
-    if (!data.mobile?.trim()) return 'मोबाईल नंबर आवश्यक आहे';
-    if (!/^\d{10}$/.test(data.mobile)) return 'मोबाईल नंबर १० अंकी असावा';
+    console.log('Validating form data:', { data, selectedItem, selectedService });
+    
+    if (!data.donorName?.trim()) {
+      return 'देणगीदाराचे नाव आवश्यक आहे';
+    }
+    
+    if (!data.mobile?.trim()) {
+      return 'मोबाईल नंबर आवश्यक आहे';
+    }
+    
+    if (!/^\d{10}$/.test(data.mobile)) {
+      return 'मोबाईल नंबर १० अंकी असावा';
+    }
 
     if (data.service === 'महाप्रसाद') {
-      if (!data.item) return 'कृपया वस्तू निवडा';
-      if (!selectedItem) return 'कृपया वैध वस्तू निवडा';
-      if (!data.quantity || data.quantity <= 0) return 'कृपया वैध प्रमाण भरा';
+      if (!data.item) {
+        return 'कृपया वस्तू निवडा';
+      }
+      if (!selectedItem) {
+        return 'कृपया वैध वस्तू निवडा';
+      }
+      if (!data.quantity || data.quantity <= 0) {
+        return 'कृपया वैध प्रमाण भरा';
+      }
 
       const maxAvailable = selectedItem.required - selectedItem.received;
       if (data.quantity > maxAvailable) {
         return `कृपया ${maxAvailable} ${selectedItem.unit} पेक्षा कमी प्रमाण निवडा`;
       }
     } else if (data.service === 'इतर') {
-      // For "इतर" category, validate selected service
-      if (!data.sevaId) return 'कृपया सेवा निवडा';
-      if (!selectedService) return 'कृपया वैध सेवा निवडा';
+      if (!data.sevaId) {
+        return 'कृपया सेवा निवडा';
+      }
+      if (!selectedService) {
+        return 'कृपया वैध सेवा निवडा';
+      }
       
       const amount = Number(data.amount);
       if (!amount || amount < selectedService.minAmount) {
@@ -251,12 +255,13 @@ const DonationForm: React.FC = () => {
       }
     }
 
-    return null; // No validation errors
+    return null;
   };
 
   // Create donation mutation with improved error handling
   const createMutation = useMutation({
-    mutationFn: (data: typeof formData) => {
+    mutationFn: async (data: typeof formData) => {
+      console.log('=== MUTATION FUNCTION CALLED ===');
       console.log('Submitting donation with data:', JSON.stringify(data, null, 2));
 
       // Create a clean data object that matches what the API expects
@@ -264,54 +269,65 @@ const DonationForm: React.FC = () => {
         donorName: data.donorName.trim(),
         mobile: data.mobile.trim(),
         service: data.service,
-        address: data.address.trim() || '',  // Address is allowed
       };
+
+      // Only add address if it's provided and not empty
+      if (data.address?.trim()) {
+        donationData.address = data.address.trim();
+      }
 
       // Add service-specific fields based on the service type
       if (data.service === 'महाप्रसाद') {
-        // For Mahaprasad: send item, quantity
+        // For Mahaprasad: ONLY send item and quantity - NO AMOUNT
         donationData.item = data.item;
-        donationData.quantity = Number(data.quantity); // Ensure it's a number
-
-        console.log('Mahaprasad donation data:', {
-          donorName: donationData.donorName,
-          mobile: donationData.mobile,
-          service: donationData.service,
-          address: donationData.address,
-          item: donationData.item,
-          quantity: donationData.quantity
-        });
+        donationData.quantity = Number(data.quantity);
+        
+        console.log('Mahaprasad donation data (no amount field):', donationData);
         
       } else if (data.service === 'इतर') {
-        // For "इतर" category: send sevaId (not serviceId) and amount - FIXED HERE
-        donationData.sevaId = data.sevaId; // Changed from serviceId to sevaId
-        donationData.amount = Number(data.amount) || 0;
+        // For "इतर" category: send sevaId and amount
+        donationData.sevaId = data.sevaId;
+        donationData.amount = Number(data.amount);
         
-        console.log('Other category donation data:', {
-          donorName: donationData.donorName,
-          mobile: donationData.mobile,
-          service: donationData.service,
-          sevaId: donationData.sevaId, // Changed from serviceId to sevaId
-          address: donationData.address,
-          amount: donationData.amount
-        });
+        console.log('Other category donation data:', donationData);
 
       } else {
         // For Abhishek: send amount only
-        donationData.amount = Number(data.amount) || 0;
-
-        console.log('Abhishek donation data:', {
-          donorName: donationData.donorName,
-          mobile: donationData.mobile,
-          service: donationData.service,
-          address: donationData.address,
-          amount: donationData.amount
-        });
+        donationData.amount = Number(data.amount);
+        
+        console.log('Abhishek donation data:', donationData);
       }
 
-      return api.createPublicDonation(donationData);
+      try {
+        console.log('Making API call to createPublicDonation...');
+        console.log('Final donation data being sent:', JSON.stringify(donationData, null, 2));
+        
+        const response = await api.createPublicDonation(donationData);
+        console.log('API call successful, response:', response);
+        return response;
+      } catch (error: any) {
+        console.error('API call failed with error:', error);
+        
+        // Log the actual error response from server
+        if (error.data) {
+          console.error('Server error response:', error.data);
+          
+          // Extract validation errors if present
+          if (error.data.errors) {
+            const errors = Object.values(error.data.errors).join(', ');
+            throw new Error(errors);
+          } else if (error.data.message) {
+            throw new Error(error.data.message);
+          } else if (error.data.error) {
+            throw new Error(error.data.error);
+          }
+        }
+        
+        throw error;
+      }
     },
     onSuccess: (response) => {
+      console.log('=== MUTATION SUCCESS ===');
       console.log('Donation successful:', response);
       playSuccessAudio();
 
@@ -336,15 +352,19 @@ const DonationForm: React.FC = () => {
       }, 2000);
     },
     onError: (error: any) => {
+      console.log('=== MUTATION ERROR ===');
       console.error('Full error object:', error);
-      console.error('Error response data:', error.response?.data);
-
+      
       let errorMessage = 'काहीतरी चूक झाली. कृपया पुन्हा प्रयत्न करा.';
 
-      if (error.response?.data?.error) {
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
+      } else if (error.data?.message) {
+        errorMessage = error.data.message;
       } else if (error.code === 'ERR_NETWORK') {
         errorMessage = 'सर्व्हरशी संपर्क साधता आला नाही. कृपया नेटवर्क तपासा.';
       }
@@ -363,7 +383,6 @@ const DonationForm: React.FC = () => {
     const item = items.find(i => i._id === selectedId);
     setSelectedItem(item || null);
 
-    // Set initial quantity based on unit
     if (item) {
       const config = getUnitConfig(item.unit);
       setFormData({ ...formData, item: selectedId, quantity: config.min });
@@ -380,7 +399,7 @@ const DonationForm: React.FC = () => {
     setFormData({ 
       ...formData, 
       sevaId: selectedId,
-      amount: service?.minAmount?.toString() || '' // Set default amount to minAmount
+      amount: service?.minAmount?.toString() || ''
     });
   };
 
@@ -389,17 +408,11 @@ const DonationForm: React.FC = () => {
       const config = getUnitConfig(selectedItem.unit);
       const maxAvailable = selectedItem.required - selectedItem.received;
 
-      // Round to nearest valid step
       let validQuantity = config.validateStep(quantity);
-
-      // Ensure within bounds
       validQuantity = Math.max(config.min, validQuantity);
       validQuantity = Math.min(validQuantity, maxAvailable);
-
-      // Format based on unit
       validQuantity = config.formatValue(validQuantity);
 
-      console.log('Quantity changed to:', validQuantity, selectedItem.unit);
       setFormData({ ...formData, quantity: validQuantity });
     }
   };
@@ -410,23 +423,32 @@ const DonationForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
+    console.log('=== FORM SUBMISSION STARTED ===');
+    console.log('Current form data:', JSON.stringify(formData, null, 2));
+    
     // Validate form before submitting
     const validationError = validateFormData(formData, selectedItem, selectedService);
     if (validationError) {
+      console.log('Validation failed:', validationError);
       showToast(validationError, 'error');
       return;
     }
 
-    console.log('Form validation passed, submitting:', formData);
-    createMutation.mutate(formData);
+    console.log('Form validation passed, calling mutation...');
+    
+    try {
+      createMutation.mutate(formData);
+    } catch (error) {
+      console.error('Error calling mutation:', error);
+      showToast('फॉर्म सबमिट करताना त्रुटी आली', 'error');
+    }
   };
 
   const getRemaining = (item: PrasadItem) => {
     return (item.required - item.received).toFixed(3);
   };
 
-  // Get unit display name in Marathi
   const getUnitDisplay = (unit: string) => {
     switch (unit) {
       case 'kg': return 'किलो';
@@ -437,7 +459,6 @@ const DonationForm: React.FC = () => {
     }
   };
 
-  // Pagination handlers
   const goToNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(prev => prev + 1);
@@ -452,7 +473,7 @@ const DonationForm: React.FC = () => {
 
   return (
     <div className="donation-form-container with-bg-image">
-      {/* Temple Header with Logo on Left, Invitation Button and Login on Right */}
+      {/* Temple Header */}
       <div className="temple-header">
         <div className="header-logo">
           <img 
@@ -467,7 +488,6 @@ const DonationForm: React.FC = () => {
           <h2 className="festival-title">श्री राम जन्मोत्सव २०२६</h2>
         </div>
 
-        {/* Invitation Download Button and Login */}
         <div className="header-actions">
           <button 
             className="invitation-download-btn"
@@ -511,9 +531,9 @@ const DonationForm: React.FC = () => {
                 setFormData({ 
                   ...formData, 
                   service: e.target.value as ServiceCategory, 
-                  sevaId: '', // Reset sevaId when service changes
+                  sevaId: '',
                   item: '',
-                  amount: '' // Clear amount when switching services
+                  amount: ''
                 });
                 setSelectedItem(null);
                 setSelectedService(null);
@@ -700,7 +720,7 @@ const DonationForm: React.FC = () => {
             </div>
           )}
 
-          {/* For "इतर" Category - Show Seva Nivda (fetched from DB) and Amount Fields */}
+          {/* For "इतर" Category */}
           {formData.service === 'इतर' && (
             <>
               <div className="form-group">
