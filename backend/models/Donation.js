@@ -54,7 +54,23 @@ const donationSchema = new mongoose.Schema({
       return this.service === 'महाप्रसाद';
     }
   },
-  // For Abhishek/Other - amount is required
+  // AMOUNT FIELD - For Abhishek and "इतर" categories
+  amount: {
+    type: Number,
+    required: function() {
+      return this.service === 'अभिषेक' || this.service === 'इतर';
+    },
+    min: [0, 'रक्कम ० पेक्षा जास्त असावी'],
+    validate: {
+      validator: function(value) {
+        if (this.service === 'अभिषेक') {
+          return value >= 100 && value <= 1000;
+        }
+        return true;
+      },
+      message: 'अभिषेक साठी रक्कम ₹१०० ते ₹१००० दरम्यान असावी'
+    }
+  },
   address: {
     type: String,
     default: ''
