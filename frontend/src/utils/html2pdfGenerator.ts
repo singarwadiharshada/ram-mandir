@@ -11,8 +11,8 @@ interface PDFGenerationParams {
 // Helper function to get display text for item column
 const getItemDisplayText = (donation: Donation): string => {
   if (donation.service === 'इतर') {
-    // For "इतर" category, show the Seva name (service name)
-    return donation.serviceName || donation.sevaId || donation.itemName || 'सेवा';
+    // For "इतर" category, show the Seva name from serviceName field
+    return donation.serviceName || donation.sevaId || 'सेवा';
   } else if (donation.service === 'महाप्रसाद') {
     // For Mahaprasad, show the item name
     return donation.itemName || '-';
@@ -32,16 +32,45 @@ const getQuantityDisplayText = (donation: Donation): string => {
   }
 };
 
-// Helper function to get amount display
+// Helper function to get amount display - FIXED to work like old code
 const getAmountDisplayText = (donation: Donation): string => {
-  if (donation.amount > 0) {
-    return `₹${donation.amount || 0}`;
+  console.log('Processing amount for donation:', {
+    id: donation._id,
+    service: donation.service,
+    amount: donation.amount,
+    amountType: typeof donation.amount
+  });
+  
+  // For Mahaprasad, amount should always be '-' (as per your logic)
+  if (donation.service === 'महाप्रसाद') {
+    return '-';
   }
+  
+  // For Abhishek and "इतर", check if amount exists and is a valid number
+  // This includes 0, which should show as ₹0 (same as old code)
+  if (donation.amount !== undefined && donation.amount !== null) {
+    // Handle both string and number amounts
+    const amount = typeof donation.amount === 'string' ? parseFloat(donation.amount) : donation.amount;
+    
+    // Check if it's a valid number (including 0)
+    if (!isNaN(amount)) {
+      return `₹${amount}`;
+    }
+  }
+  
   return '-';
 };
 
 // Full report with stats - VERTICAL & BLACK & WHITE
 export const generateDonationsPDF = ({ donations, stats }: PDFGenerationParams) => {
+  console.log('Generating PDF with donations:', donations.map(d => ({
+    id: d._id,
+    service: d.service,
+    amount: d.amount,
+    serviceName: d.serviceName,
+    itemName: d.itemName
+  })));
+  
   // Create a hidden div with OPTIMIZED width for portrait
   const element = document.createElement('div');
   element.style.width = '800px'; // Reduced width for portrait
@@ -135,7 +164,7 @@ export const generateDonationsPDF = ({ donations, stats }: PDFGenerationParams) 
               ${d.service === 'इतर' ? '<span style="font-size: 9px; color: #555; display: block;">(सेवा)</span>' : ''}
             </td>
             <td style="padding: 6px 4px; border: 1px solid #999; text-align: center;">${quantityDisplay}</td>
-            <td style="padding: 6px 4px; border: 1px solid #999; text-align: right;">${amountDisplay}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999; text-align: right; font-weight: ${d.service !== 'महाप्रसाद' && d.amount ? 'bold' : 'normal'};">${amountDisplay}</td>
             <td style="padding: 6px 4px; border: 1px solid #999;">${formattedDate}</td>
             <td style="padding: 6px 4px; border: 1px solid #999;">${d.mobile || '-'}</td>
             <td style="padding: 6px 4px; border: 1px solid #999; text-align: center;">✕</td>
@@ -188,6 +217,12 @@ export const generateDonationsPDF = ({ donations, stats }: PDFGenerationParams) 
 
 // Simple version without stats - VERTICAL & BLACK & WHITE
 export const generateSimpleDonationsPDF = (donations: Donation[], title: string = 'देणगी यादी') => {
+  console.log('Generating simple PDF with donations:', donations.map(d => ({
+    id: d._id,
+    service: d.service,
+    amount: d.amount
+  })));
+  
   const element = document.createElement('div');
   element.style.width = '800px'; // Width for portrait
   element.style.padding = '20px';
@@ -252,7 +287,7 @@ export const generateSimpleDonationsPDF = (donations: Donation[], title: string 
               ${d.service === 'इतर' ? '<span style="font-size: 9px; color: #555; display: block;">(सेवा)</span>' : ''}
             </td>
             <td style="padding: 6px 4px; border: 1px solid #999; text-align: center;">${quantityDisplay}</td>
-            <td style="padding: 6px 4px; border: 1px solid #999; text-align: right;">${amountDisplay}</td>
+            <td style="padding: 6px 4px; border: 1px solid #999; text-align: right; font-weight: ${d.service !== 'महाप्रसाद' && d.amount ? 'bold' : 'normal'};">${amountDisplay}</td>
             <td style="padding: 6px 4px; border: 1px solid #999;">${formattedDate}</td>
             <td style="padding: 6px 4px; border: 1px solid #999;">${d.mobile || '-'}</td>
             <td style="padding: 6px 4px; border: 1px solid #999; text-align: center;">✕</td>
