@@ -262,9 +262,9 @@ const DonationForm: React.FC = () => {
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       console.log('=== MUTATION FUNCTION CALLED ===');
-      console.log('Submitting donation with data:', JSON.stringify(data, null, 2));
+      console.log('Raw form data:', JSON.stringify(data, null, 2));
 
-      // Create a clean data object that matches what the API expects
+      // Create base object with common fields
       const donationData: any = {
         donorName: data.donorName.trim(),
         mobile: data.mobile.trim(),
@@ -278,11 +278,12 @@ const DonationForm: React.FC = () => {
 
       // Add service-specific fields based on the service type
       if (data.service === 'महाप्रसाद') {
-        // For Mahaprasad: ONLY send item and quantity - NO AMOUNT
+        // For Mahaprasad: ONLY send item and quantity
         donationData.item = data.item;
         donationData.quantity = Number(data.quantity);
         
-        console.log('Mahaprasad donation data (no amount field):', donationData);
+        // IMPORTANT: Do NOT include amount field at all
+        console.log('Mahaprasad donation data (amount field excluded):', donationData);
         
       } else if (data.service === 'इतर') {
         // For "इतर" category: send sevaId and amount
