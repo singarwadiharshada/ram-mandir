@@ -55,13 +55,6 @@ const donationSchema = new mongoose.Schema({
     }
   },
   // For Abhishek/Other - amount is required
-  amount: { 
-    type: Number, 
-    required: function() {
-      return this.service !== 'महाप्रसाद';
-    },
-    min: [1, 'रक्कम १ पेक्षा जास्त असावी']
-  },
   address: {
     type: String,
     default: ''
