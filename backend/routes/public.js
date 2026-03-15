@@ -46,7 +46,6 @@ router.get('/items', async (req, res) => {
   }
 });
 
-// ============ ADD THIS NEW ENDPOINT FOR PUBLIC SERVICES ============
 // Get available services for public
 router.get('/services', async (req, res) => {
   try {
@@ -112,7 +111,7 @@ router.get('/services/:id', async (req, res) => {
   }
 });
 
-// Public donation endpoint (no auth) - UPDATED to return full donation object
+// Public donation endpoint (no auth) - FIXED to properly return amount
 router.post('/donations', async (req, res) => {
   try {
     console.log('=== PUBLIC DONATION REQUEST ===');
@@ -142,7 +141,7 @@ router.post('/donations', async (req, res) => {
 
     // Service-specific validation
     if (req.body.service === 'महाप्रसाद') {
-      // Mahaprasad requires item but NOT amount
+      // Mahaprasad requires item but amount is 0
       if (!req.body.item) {
         return res.status(400).json({ 
           error: 'कृपया वस्तू निवडा' 
@@ -255,27 +254,33 @@ router.post('/donations', async (req, res) => {
     console.log('Creating donation with data:', donationData);
     const donation = await Donation.create(donationData);
     
-    // Populate references for response
-    let populatedDonation;
-    if (donation.service === 'महाप्रसाद') {
-      populatedDonation = await Donation.findById(donation._id)
-        .populate('item')
-        .lean();
-    } else if (donation.service === 'इतर') {
-      populatedDonation = await Donation.findById(donation._id)
-        .populate('sevaId')
-        .lean();
-      if (populatedDonation && populatedDonation.sevaId) {
-        populatedDonation.serviceName = populatedDonation.sevaId.name;
+    // IMPORTANT: Return the complete donation object with all fields
+    const savedDonation = await Donation.findById(donation._id)
+      .populate('item')
+      .populate('sevaId')
+      .lean();
+    
+    // Ensure amount is included in the response
+    if (savedDonation) {
+      // Make sure amount is present
+      if (savedDonation.amount === undefined || savedDonation.amount === null) {
+        savedDonation.amount = savedDonation.service === 'महाप्रसाद' ? 0 : null;
       }
-    } else {
-      populatedDonation = donation.toObject();
+      
+      // Add serviceName if populated
+      if (savedDonation.sevaId && savedDonation.sevaId.name) {
+        savedDonation.serviceName = savedDonation.sevaId.name;
+      }
+      
+      // Add itemName if populated
+      if (savedDonation.item && savedDonation.item.name) {
+        savedDonation.itemName = savedDonation.item.name;
+      }
+      
+      console.log('Returning donation with amount:', savedDonation.amount);
     }
     
-    console.log('Donation created successfully:', donation._id);
-    
-    // Return the full donation object (not just message and ID)
-    res.status(201).json(populatedDonation || donation);
+    res.status(201).json(savedDonation || donation);
 
   } catch (error) {
     console.error('Public donation error:', error);
@@ -289,6 +294,84 @@ router.post('/donations', async (req, res) => {
       return res.status(400).json({ error: messages.join(', ') });
     }
     
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// NEW: Get public donations (for displaying in UI)
+router.get('/donations', async (req, res) => {
+  try {
+    const { category, page = 1, limit = 50 } = req.query;
+    const query = {};
+
+    if (category) {
+      query.service = category;
+    }
+
+    const donations = await Donation.find(query)
+      .select('-__v')
+      .populate('item', 'name unit')
+      .populate('sevaId', 'name')
+      .sort({ date: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const transformedDonations = donations.map(donation => {
+      const donationObj = donation.toObject();
+      
+      if (donationObj.item && donationObj.item.name) {
+        donationObj.itemName = donationObj.item.name;
+      }
+      
+      if (donationObj.sevaId && donationObj.sevaId.name) {
+        donationObj.serviceName = donationObj.sevaId.name;
+      }
+      
+      // Ensure amount is included for non-Mahaprasad donations
+      if (donationObj.service !== 'महाप्रसाद') {
+        donationObj.amount = donationObj.amount || 0;
+      } else {
+        donationObj.amount = 0;
+      }
+      
+      return donationObj;
+    });
+
+    const total = await Donation.countDocuments(query);
+
+    res.json({
+      items: transformedDonations,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    console.error('Error fetching public donations:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// NEW: Get single donation by ID
+router.get('/donations/:id', async (req, res) => {
+  try {
+    const donation = await Donation.findById(req.params.id)
+      .populate('item')
+      .populate('sevaId')
+      .lean();
+    
+    if (!donation) {
+      return res.status(404).json({ error: 'देणगी सापडली नाही' });
+    }
+    
+    // Ensure amount is included
+    if (donation.amount === undefined || donation.amount === null) {
+      donation.amount = donation.service === 'महाप्रसाद' ? 0 : null;
+    }
+    
+    res.json(donation);
+  } catch (error) {
+    console.error('Error fetching donation:', error);
     res.status(500).json({ error: error.message });
   }
 });
