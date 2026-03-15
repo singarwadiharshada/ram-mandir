@@ -717,7 +717,7 @@ const DonationForm: React.FC = () => {
                 max="1000"
                 required
               />
-              <small className="amount-hint">(₹१०० ते ₹१००० दरम्यान रक्कम असावी.)</small>
+              <small className="amount-hint">(₹५०० ते ₹१००० दरम्यान रक्कम असावी.)</small>
             </div>
           )}
 
